@@ -1,0 +1,99 @@
+fileFormatVersion: 2
+guid: 77e1fd430517d2247aa356ffb6ccc5ad
+TextureImporter:
+  serializedVersion: 2
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    linearTexture: 0
+    correctGamma: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: .25
+    normalMapFilter: 0
+  isReadable: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 0
+  seamlessCubemap: 0
+  textureFormat: -1
+  maxTextureSize: 1024
+  textureSettings:
+    filterMode: -1
+    aniso: 1
+    mipBias: -1
+    wrapMode: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: .5, y: .5}
+  spritePixelsToUnits: 100
+  alphaIsTransparency: 1
+  textureType: 8
+  buildTargetSettings: []
+  spriteSheet:
+    sprites:
+    - name: intro_0
+      rect:
+        serializedVersion: 2
+        x: 188
+        y: 1581
+        width: 1645
+        height: 348
+      alignment: 0
+      pivot: {x: .5, y: .5}
+    - name: intro_1
+      rect:
+        serializedVersion: 2
+        x: 188
+        y: 1339
+        width: 1645
+        height: 201
+      alignment: 0
+      pivot: {x: .5, y: .5}
+    - name: intro_2
+      rect:
+        serializedVersion: 2
+        x: 188
+        y: 1006
+        width: 1645
+        height: 301
+      alignment: 0
+      pivot: {x: .5, y: .5}
+    - name: intro_3
+      rect:
+        serializedVersion: 2
+        x: 188
+        y: 558
+        width: 1645
+        height: 397
+      alignment: 0
+      pivot: {x: .5, y: .5}
+    - name: intro_4
+      rect:
+        serializedVersion: 2
+        x: 188
+        y: 128
+        width: 1645
+        height: 398
+      alignment: 0
+      pivot: {x: .5, y: .5}
+    - name: intro_5
+      rect:
+        serializedVersion: 2
+        x: 188
+        y: 33
+        width: 1645
+        height: 58
+      alignment: 0
+      pivot: {x: .5, y: .5}
+  spritePackingTag: 
+  userData: 
