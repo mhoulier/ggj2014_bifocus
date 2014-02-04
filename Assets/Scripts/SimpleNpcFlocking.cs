@@ -330,7 +330,7 @@ public class SimpleNpcFlocking : MonoBehaviour {
 				dir.Normalize();
 				Debug.DrawLine(transform.position, transform.position + debugRaySize * dir, Color.green);
 
-				if (wanderSteering != null)
+				if (wanderSteering.sqrMagnitude >= Mathf.Epsilon)
 				{
 					dir = wanderSteering;
 					dir.Normalize();
@@ -341,7 +341,7 @@ public class SimpleNpcFlocking : MonoBehaviour {
 				dir.Normalize();
 				Debug.DrawLine(transform.position, transform.position + debugRaySize * dir, Color.red);
 			
-				if (avoidSteering != null)
+				if (avoidSteering.sqrMagnitude >= Mathf.Epsilon)
 				{
 					dir = avoidSteering;
 					dir.Normalize();
@@ -352,14 +352,14 @@ public class SimpleNpcFlocking : MonoBehaviour {
 				dir.Normalize();
 				Debug.DrawLine(m_CrowdTarget.transform.position, m_CrowdTarget.transform.position + debugRaySize * dir, Color.red);
 
-				if (separationSteering != null)
+				if (separationSteering.sqrMagnitude >= Mathf.Epsilon)
 				{
 					dir = separationSteering;
 					dir.Normalize();
 					Debug.DrawLine(transform.position, transform.position + debugRaySize * dir, Color.cyan);
 				}
 
-				if (stayOutSteering != null)
+				if (stayOutSteering.sqrMagnitude >= Mathf.Epsilon)
 				{
 					dir = stayOutSteering;
 					dir.Normalize();
