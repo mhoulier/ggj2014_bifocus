@@ -1,15 +1,28 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class CrowdSpawner : MonoBehaviour {
 
 	// Set of available animations
 	public string[] animationNames;
 	// Delay on spawn.
-	public float spawnDelay = 20f;
+	public float spawnDelay = 5.0f;
+
+	[SerializeField]
+	private float m_JoinArenaDelay = 10.0f;
+
+	[SerializeField]
+	private float m_PlayDelay = 60.0f;
 
 	[SerializeField]
 	private float m_CrowdDestructDelay = 20.0f;
+
+	[SerializeField]
+	private string[] m_arenaBoundsLayers;
+
+	[SerializeField]
+	private string[] m_arenaBoundsCollidersLayers;
 
 	// Crowd controller prefab
 	public GameObject crowdControllerPrefab;
@@ -22,6 +35,11 @@ public class CrowdSpawner : MonoBehaviour {
 
 	private GameHunt m_GameMode = null;
 
+	// Arena bounds (obstacles and colliders) 
+	// they are disabled to let the NPCs enter/leave the arena
+	private List<GameObject> m_arenaBounds = null;
+	private List<GameObject> m_arenaBoundscolliders = null;
+
 
 	// Use this for initialization
 	void Start () {
@@ -32,6 +50,18 @@ public class CrowdSpawner : MonoBehaviour {
 
 		m_GameMode = (GameHunt)FindObjectOfType(typeof(GameHunt));
 
+
+		m_arenaBounds = new List<GameObject>();
+		for (int i = 0; i < m_arenaBoundsLayers.Length; i++)
+		{
+			FindGameObjectsWithLayerName(ref m_arenaBounds, m_arenaBoundsLayers[i]);
+		}
+
+		m_arenaBoundscolliders = new List<GameObject>();
+		for (int i = 0; i < m_arenaBoundsCollidersLayers.Length; i++)
+		{
+			FindGameObjectsWithLayerName(ref m_arenaBoundscolliders, m_arenaBoundsCollidersLayers[i]);
+		}
 	}
 
 	void Update()
@@ -56,6 +86,7 @@ public class CrowdSpawner : MonoBehaviour {
 		{
 
 			GameObject crowdCtrl = null;
+			SimpleNpcController npcManager = null;
 			
 			// Instantiate a crowd controller
 			if (crowdControllerPrefab != null)
@@ -64,34 +95,37 @@ public class CrowdSpawner : MonoBehaviour {
 				
 			}
 
-
-			// Set a random animation for the crowd target
-			int animIndex = Random.Range(0, animationNames.Length);
-
-			Debug.Log("#### SPAWN ####");
-
-			// start a crowd target animation
-			crowdTargetAnimator.SetTrigger(animationNames[animIndex]);
-
-			// Notify that there is a new wave
-			m_GameMode.OnNewWave();
-
-
-
-			// hack : wait for anim to start ?
-			//yield return new WaitForSeconds(2.0f);
-
-			// wait for the end of the animation
-			//yield return WaitForAnimation( crowdTargetAnimator.animation );
-
-			//yield return WaitForAnimatorState( crowdTargetAnimator, animationNames[animIndex] );
-
-			//Debug.Log("Animation over");
+			yield return new WaitForSeconds(1.0f);
 
 			// Destroy the crowd
 			if (crowdCtrl != null)
 			{
-				//DestroyObject(crowdCtrl, 20.0f);
+				npcManager = crowdCtrl.GetComponent<SimpleNpcController>();
+
+				// Join the arena
+				Debug.Log("#### JOIN ARENA ####");
+				EnableArenaBounds(false);
+				// Join the arena
+				npcManager.OnJoinArena();
+				// Notify that there is a new wave
+				m_GameMode.OnNewWave();
+				yield return new WaitForSeconds(m_JoinArenaDelay);
+				
+				
+				// Play
+				Debug.Log("#### PLAY IN ARENA ####");
+				EnableArenaBounds(true);
+				// Set a random animation for the crowd target
+				int animIndex = Random.Range(0, animationNames.Length);
+				// start a crowd target animation
+				crowdTargetAnimator.SetTrigger(animationNames[animIndex]);
+				npcManager.OnPlay();
+				yield return new WaitForSeconds(m_PlayDelay);
+
+				// Leave the arena
+				Debug.Log("#### LEAVE ARENA ####");
+				EnableArenaBounds(false);
+				npcManager.OnLeaveArena();
 				yield return new WaitForSeconds(m_CrowdDestructDelay);
 
 				Component[] npcs = crowdCtrl.GetComponentsInChildren<NpcController>();
@@ -110,20 +144,43 @@ public class CrowdSpawner : MonoBehaviour {
 		StartCoroutine(SpawnCrowd());
 	}
 
-	private IEnumerator WaitForAnimation ( Animation animation )
+	private void EnableArenaBounds(bool enable)
 	{
-		do
+		foreach (GameObject go in m_arenaBounds)
 		{
-			yield return null;
-		} while ( animation.isPlaying );
+			go.SetActive(enable);
+		}
+
+		/*
+		// lets the player cross !!
+		foreach (GameObject go in m_arenaBoundscolliders)
+		{
+			go.collider.enabled = enable;
+
+		}
+		//*/
+
+		int npcLayer = LayerMask.NameToLayer("npcLayer");
+		for (int i = 0; i < m_arenaBoundsCollidersLayers.Length; i++)
+		{
+			Physics.IgnoreLayerCollision(npcLayer, LayerMask.NameToLayer(m_arenaBoundsCollidersLayers[i]) , !enable);
+		}
 	}
 
-	private IEnumerator WaitForAnimatorState ( Animator animator, string animName )
+	private void FindGameObjectsWithLayer (ref List<GameObject> objects, int layer) 
 	{
-		do
-		{
-			Debug.Log("Still in " + animName);
-			yield return null;
-		} while ( animator.GetAnimatorTransitionInfo(0).IsName(animName) );
+		GameObject[] goArray = FindObjectsOfType(typeof(GameObject)) as GameObject[];
+		for (int i = 0; i < goArray.Length; i++) {
+			if (goArray[i].layer == layer) {
+				objects.Add(goArray[i]);
+			}
+		}
 	}
+
+	private void FindGameObjectsWithLayerName (ref List<GameObject> objects, string layer) 
+	{
+		FindGameObjectsWithLayer(ref objects, LayerMask.NameToLayer(layer));
+	}
+
+
 }

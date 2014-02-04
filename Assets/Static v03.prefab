@@ -1247,7 +1247,7 @@ GameObject:
   - 65: {fileID: 6500062}
   - 23: {fileID: 2300138}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1372,8 +1372,8 @@ GameObject:
   - 33: {fileID: 3300152}
   - 65: {fileID: 6500076}
   - 23: {fileID: 2300152}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1426,8 +1426,8 @@ GameObject:
   - 33: {fileID: 3300158}
   - 65: {fileID: 6500082}
   - 23: {fileID: 2300158}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1462,8 +1462,8 @@ GameObject:
   - 33: {fileID: 3300162}
   - 65: {fileID: 6500086}
   - 23: {fileID: 2300162}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1498,8 +1498,8 @@ GameObject:
   - 33: {fileID: 3300166}
   - 65: {fileID: 6500090}
   - 23: {fileID: 2300166}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1516,8 +1516,8 @@ GameObject:
   - 33: {fileID: 3300168}
   - 65: {fileID: 6500092}
   - 23: {fileID: 2300168}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1552,8 +1552,8 @@ GameObject:
   - 33: {fileID: 3300172}
   - 65: {fileID: 6500096}
   - 23: {fileID: 2300172}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1570,8 +1570,8 @@ GameObject:
   - 33: {fileID: 3300174}
   - 65: {fileID: 6500098}
   - 23: {fileID: 2300174}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1606,8 +1606,8 @@ GameObject:
   - 33: {fileID: 3300178}
   - 65: {fileID: 6500102}
   - 23: {fileID: 2300178}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1624,8 +1624,8 @@ GameObject:
   - 33: {fileID: 3300180}
   - 65: {fileID: 6500104}
   - 23: {fileID: 2300180}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1660,8 +1660,8 @@ GameObject:
   - 33: {fileID: 3300184}
   - 65: {fileID: 6500108}
   - 23: {fileID: 2300184}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1678,8 +1678,8 @@ GameObject:
   - 33: {fileID: 3300186}
   - 65: {fileID: 6500110}
   - 23: {fileID: 2300186}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1714,8 +1714,8 @@ GameObject:
   - 33: {fileID: 3300190}
   - 65: {fileID: 6500114}
   - 23: {fileID: 2300190}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1732,8 +1732,8 @@ GameObject:
   - 33: {fileID: 3300192}
   - 65: {fileID: 6500116}
   - 23: {fileID: 2300192}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1768,8 +1768,8 @@ GameObject:
   - 33: {fileID: 3300196}
   - 65: {fileID: 6500120}
   - 23: {fileID: 2300196}
-  m_Layer: 0
-  m_Name: Cube
+  m_Layer: 12
+  m_Name: Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

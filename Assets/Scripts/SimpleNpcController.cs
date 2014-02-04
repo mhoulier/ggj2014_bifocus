@@ -10,6 +10,10 @@ public class SimpleNpcController : MonoBehaviour {
 	public int civilianSize = 20;
 	public int vilainSize = 1;
 
+	// Set of available animations
+	public SimpleNpcFlocking.NpcBehavior [] allowedPlayBehaviors;
+
+
 	// info
 	public Vector3 flockCenter;
 	public Vector3 flockVelocity;
@@ -18,7 +22,7 @@ public class SimpleNpcController : MonoBehaviour {
 	private GameObject[] boids = null;
 
 	private List<GameObject> m_BoidsToRemove = null;
-	
+
 	void Start()
 	{
 		boids = new GameObject[civilianSize + vilainSize];
@@ -51,6 +55,19 @@ public class SimpleNpcController : MonoBehaviour {
 
 			//Debug.Log ("Boid " + i + " created");
 		}
+	}
+
+	public SimpleNpcFlocking [] GetBoids()
+	{
+		int boidCount = boids.Length;
+		SimpleNpcFlocking [] res = new SimpleNpcFlocking[boidCount];
+		for (int boidIndex = 0; boidIndex < boidCount; ++boidIndex)
+		{
+			if (boids[boidIndex] != null)
+				res[boidIndex] = boids[boidIndex].GetComponent<SimpleNpcFlocking>(); 
+		}
+
+		return res;
 	}
 
 	private int FindBoidIndex(GameObject _BoidToFind)
@@ -119,5 +136,46 @@ public class SimpleNpcController : MonoBehaviour {
 		
 		flockCenter = theCenter/(civilianSize + vilainSize);
 		flockVelocity = theVelocity/(civilianSize + vilainSize);
+	}
+
+	public void OnJoinArena()
+	{
+		// Let all the players join the arena
+		SetBoidsBehavior(SimpleNpcFlocking.NpcBehavior.E_JoinArena);
+	}
+
+	public void OnPlay()
+	{
+		if (allowedPlayBehaviors.Length == 0)
+		{
+			// should never happen
+			// Choose pursuit by default
+			SetBoidsBehavior(SimpleNpcFlocking.NpcBehavior.E_PursuitTarget);
+		}
+		else
+		{
+			// Choose a random behavior
+			int behaviorIndex = Random.Range(0, allowedPlayBehaviors.Length);
+			SetBoidsBehavior(allowedPlayBehaviors[behaviorIndex]);
+		}
+	}
+
+	public void OnLeaveArena()
+	{
+		// Let all the players leave the arena
+		SetBoidsBehavior(SimpleNpcFlocking.NpcBehavior.E_LeaveArena);
+	}
+
+	private void SetBoidsBehavior(SimpleNpcFlocking.NpcBehavior behavior)
+	{
+		int boidCount = boids.Length;
+		for (int boidIndex = 0; boidIndex < boidCount; ++boidIndex)
+		{
+			if (boids[boidIndex] != null)
+			{
+				SimpleNpcFlocking boid = boids[boidIndex].GetComponent<SimpleNpcFlocking>();
+				boid.npcBehavior = behavior;
+			}
+		}
 	}
 }
