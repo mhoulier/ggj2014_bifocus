@@ -5,7 +5,9 @@ public enum NetworkMode { E_NetworkNone, E_NetworkLanOnly, E_NetworkOnlineOnly, 
 
 public class NetworkManager : MonoBehaviour
 {
-	public NetworkMode m_NetworkMode = NetworkMode.E_NetworkNone;
+	[SerializeField]
+	private NetworkMode m_NetworkMode = NetworkMode.E_NetworkNone;
+
 	public int m_ConnectionCountMax = 4;
 	public int m_ConnectPort = 4231;
 	public int m_AdvertisingPort = 6534;
@@ -23,6 +25,10 @@ public class NetworkManager : MonoBehaviour
 	{
 	
 	}
+
+	public bool IsLocalGame() { return (m_NetworkMode == NetworkMode.E_NetworkNone); }
+	public bool IsNetworkGame() { return (IsLocalGame() == false); }
+	public void SetNetworkMode(NetworkMode _NetworkMode) { m_NetworkMode = _NetworkMode; }
 	
 	public NetworkPlayer GetLocalNetClient() { return Network.player; }
 	
@@ -37,6 +43,10 @@ public class NetworkManager : MonoBehaviour
 			NetworkServer server = gameObject.AddComponent<NetworkServer>();
 			server.StartServer(m_NetworkMode, m_ConnectionCountMax, m_ConnectPort, m_ServerName,
 				OnServerStarted, OnServerStopped, _ClientConnectedDelegate, _ClientDisconnectedDelegate);
+		}
+		else
+		{
+			Debug.LogError(string.Format("StartServer: don't start a server for local game (Network mode: {0})", m_NetworkMode.ToString()));
 		}
 	}
 	
