@@ -11,7 +11,6 @@ public class SelectMenu : MonoBehaviour
 	[SerializeField]
 	private GameObject m_GameManagerPrefab = null;
 	private LevelManager m_LevelManager = null;
-	private NetworkManager m_NetworkManager = null;
 	private InputManager m_InputManager = null;
 	private MenuManager m_MenuManager = null;
 	private PlayerManager m_PlayerManager = null;
@@ -196,12 +195,6 @@ public class SelectMenu : MonoBehaviour
 			Debug.Log("Instantiating gameManager!");
 		}
 		
-		NetworkManager networkManager = (NetworkManager)FindObjectOfType( typeof(NetworkManager) );
-		if (networkManager == null)
-		{
-			Debug.Log("GameManager prefab is missing a NetworkManager component!");
-		}
-		
 		InputManager inputManager = (InputManager)FindObjectOfType( typeof(InputManager) );
 		if (inputManager == null)
 		{
@@ -221,7 +214,6 @@ public class SelectMenu : MonoBehaviour
 		}
 		
 		m_LevelManager = levelManager;
-		m_NetworkManager = networkManager;
 		m_InputManager = inputManager;
 		m_MenuManager = menuManager;
 		m_PlayerManager = playerManager;
@@ -248,11 +240,8 @@ public class SelectMenu : MonoBehaviour
 		bool addLocalPlayers = (players.Count == 0);
 		if (addLocalPlayers)
 		{
-			NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-			bool isAuthority = true;
-
-			m_PlayerManager.AddLocalPlayerToJoin(localNetClient, InputDevice.E_InputDeviceNone, isAuthority);
-			m_PlayerManager.AddLocalPlayerToJoin(localNetClient, InputDevice.E_InputDeviceNone, isAuthority);
+			m_PlayerManager.AddLocalPlayerToJoin(InputDevice.E_InputDeviceNone);
+			m_PlayerManager.AddLocalPlayerToJoin(InputDevice.E_InputDeviceNone);
 
 			players = m_PlayerManager.GetPlayers();
 			playerCount = players.Count;
@@ -360,22 +349,6 @@ public class SelectMenu : MonoBehaviour
 		m_LevelManager.LoadLevel(m_NextLevelIndex);
 	}
 	
-	private void ClientEndSequence()
-	{
-		m_IsActiveSequence = false;
-		
-		//@FIXME: should client request level load or the server should send it automatically?? => probably server
-		NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-		m_LevelManager.ClientLoadLevelRequest(localNetClient);
-	}
-
-	private void ServerEndSequence()
-	{
-		m_IsActiveSequence = false;
-		
-		m_LevelManager.ServerLoadLevel(m_NextLevelIndex);
-	}
-	
 	void Update()
 	{
 		float deltaTime = Time.deltaTime;
@@ -462,60 +435,8 @@ public class SelectMenu : MonoBehaviour
 		bool nextLevelIsValid = m_LevelManager.IsValidLevelIndex(m_NextLevelIndex);
 		if (nextLevelIsValid)
 		{
-			NetworkServer networkServer = m_NetworkManager.GetServer();
-			if (networkServer == null)
-			{
-				Debug.Log("UpdateLevelTransitionRequest: No Network Server - initialization failed?");
-
-				EndSequence();
-			}
-			else if (networkServer.IsServerStarted())
-			{
-				ServerEndSequence();
-/*
-				NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-				InputDevice localPlayerInput = GetLocalPlayerInputDevice(0);
-				
-				if (m_PlayerManager.HasLocalPlayerJoined(localNetClient, localPlayerInput))
-				{
-					ServerEndSequence();
-				}
-				else if (m_PlayerManager.IsLocalPlayerJoining(localNetClient, localPlayerInput) == false)
-				{
-					bool isAuthority = m_NetworkManager.IsNetworkAuthorithy();
-					//@FIXME handle the case where the RPC call to server got lost/discarded?
-					m_PlayerManager.AddLocalPlayerToJoin(localNetClient, localPlayerInput, isAuthority);
-				}
-*/
-			}
+			EndSequence();
 		}
-/*
-		else
-		{
-			NetworkClient networkClient = m_NetworkManager.GetClient();
-			if (networkClient != null && networkClient.IsConnectedToServer())
-			{
-				NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-				InputDevice localPlayerInput = GetLocalPlayerInputDevice(0);
-				
-				if (m_PlayerManager.HasLocalPlayerJoined(localNetClient, localPlayerInput))
-				{
-					ClientEndSequence();
-				}
-				else if (m_PlayerManager.IsLocalPlayerJoining(localNetClient, localPlayerInput) == false)
-				{
-					bool isAuthority = m_NetworkManager.IsNetworkAuthorithy();
-					System.Diagnostics.Debug.Assert(isAuthority == false);
-					//@FIXME handle the case where the RPC call to server got lost/discarded?
-					m_PlayerManager.AddLocalPlayerToJoin(localNetClient, localPlayerInput, isAuthority);
-				}
-				else
-				{
-					//@TODO: add some time out?
-				}
-			}
-		}
-*/
 	}
 	
 	private void DisableMenuFocus()
@@ -737,81 +658,7 @@ public class SelectMenu : MonoBehaviour
 					
 					mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
 				}
-				
-				/*				
-				string createGameButtonLabel = "Create Game";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), createGameButtonLabel))
-				{
-					CreateGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-		
-				string joinGameButtonLabel = "Join Game";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), joinGameButtonLabel))
-				{
-					JoinGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-				
-				string editLevelButtonLabel = "Edit Level";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), editLevelButtonLabel))
-				{
-					EditLevelButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-				
-				string aboutGameButtonLabel = "About";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), aboutGameButtonLabel))
-				{
-					AboutGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-		
-				string exitGameButtonLabel = "Exit";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), exitGameButtonLabel))
-				{
-					QuitGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-*/
 			}
-/*			
-			int selectPanelIndex = 2;
-			if (m_CurrentPanelIndex == selectPanelIndex)
-			{
-				int joinPanelSlideCount = m_CurrentPanelIndex - selectPanelIndex;
-				int joinPanelOffsetX = centerPanelOffsetX + joinPanelSlideCount * panelSlideOffsetX;
-				int joinPanelOffsetY = centerPanelOffsetY;
-				Rect joinPanel = new Rect( joinPanelOffsetX, joinPanelOffsetY, panelWidth, panelHeight);
-				
-				GUI.Box(joinPanel, "\n<b>Players Select Screen:</b>");
-				
-				int joinPanelTitleHeight = 40;
-				
-				int joinPanelButtonHeight = 40;
-				int joinPanelButtonWidth = 160;
-				int joinPanelButtonOffsetX = joinPanelOffsetX + (panelWidth - joinPanelButtonWidth) / 2;
-				int joinPanelButtonOffsetY = joinPanelOffsetY + joinPanelTitleHeight;
-				int joinPanelButtonInterspaceY = 60;
-				
-				int playerCount = GetLocalPlayerCount();
-				for (int playerIndex = 0; playerIndex < playerCount && isUIEnable; ++playerIndex)
-				{
-					GUI.Box(new Rect(joinPanelButtonOffsetX, joinPanelButtonOffsetY, joinPanelButtonWidth, joinPanelButtonHeight), string.Format( "Player %d:", playerIndex) );
-					joinPanelButtonOffsetY += joinPanelButtonInterspaceY;
-					
-					MenuButton menuButton = m_MenuButtons[buttonIndex];
-					
-					GUI.SetNextControlName(menuButton.m_ControlName);
-					if (GUI.Button(new Rect(joinPanelButtonOffsetX, joinPanelButtonOffsetY, joinPanelButtonWidth, joinPanelButtonHeight), menuButton.m_LabelName))
-					{
-						//
-					}
-					
-					joinPanelButtonOffsetY += joinPanelButtonInterspaceY;
-				}
-			}
-*/
 		}
 	}
 }

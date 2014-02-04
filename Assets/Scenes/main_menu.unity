@@ -118,8 +118,6 @@ MonoBehaviour:
   m_PanelButtonHeight: 40
   m_PanelTitle: 
   m_PlayerCount: 2
-  m_SelectedDisplayedServerIndex: -1
-  m_ServerListUpdateTimeIntervalInSeconds: 2
 --- !u!81 &2035565700
 AudioListener:
   m_ObjectHideFlags: 0

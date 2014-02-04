@@ -27,7 +27,6 @@ public class MainMenu : MonoBehaviour
 	[SerializeField]
 	private GameObject m_GameManagerPrefab = null;
 	private LevelManager m_LevelManager = null;
-	private NetworkManager m_NetworkManager = null;
 	private InputManager m_InputManager = null;
 	private MenuManager m_MenuManager = null;
 	private PlayerManager m_PlayerManager = null;
@@ -128,13 +127,6 @@ public class MainMenu : MonoBehaviour
 	
 	private MenuButton[] m_MenuButtons = null;
 	
-	//@HACK temporary display solution for server list
-	private string[] m_DisplayServerList = null;
-	private Vector2 m_ScrollPositionServerSelect = Vector2.zero;
-	public int m_SelectedDisplayedServerIndex = -1;
-	public float m_ServerListUpdateTimeIntervalInSeconds = 2.0f;
-	private float m_TimeSinceLastServerListUpdate = 0.0f;
-	
 	void OnLevelWasLoaded(int _level)
 	{
 		//InitGameSequence();
@@ -167,12 +159,6 @@ public class MainMenu : MonoBehaviour
 			
 			Debug.Log("Instantiating gameManager!");
 		}
-		
-		NetworkManager networkManager = (NetworkManager)FindObjectOfType( typeof(NetworkManager) );
-		if (networkManager == null)
-		{
-			Debug.Log("GameManager prefab is missing a NetworkManager component!");
-		}
 
 		InputManager inputManager = (InputManager)FindObjectOfType( typeof(InputManager) );
 		if (inputManager == null)
@@ -193,7 +179,6 @@ public class MainMenu : MonoBehaviour
 		}
 		
 		m_LevelManager = levelManager;
-		m_NetworkManager = networkManager;
 		m_InputManager = inputManager;
 		m_MenuManager = menuManager;
 		m_PlayerManager = playerManager;
@@ -239,27 +224,11 @@ public class MainMenu : MonoBehaviour
 	
 	private void EndSequence()
 	{
-		//@FIXME: should it use EndSequence() when playing a local game?
+		//@NOTE: only use EndSequence() when playing a local game, otherwise consider server / client versions
 		
 		m_IsActiveSequence = false;
 		
 		m_LevelManager.LoadLevel(m_NextLevelIndex);
-	}
-	
-	private void ClientEndSequence()
-	{
-		m_IsActiveSequence = false;
-		
-		//@FIXME: should client request level load or the server should send it automatically?? => probably server
-		NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-		m_LevelManager.ClientLoadLevelRequest(localNetClient);
-	}
-	
-	private void ServerEndSequence()
-	{
-		m_IsActiveSequence = false;
-		
-		m_LevelManager.ServerLoadLevel(m_NextLevelIndex);
 	}
 	
 	void Update()
@@ -336,81 +305,27 @@ public class MainMenu : MonoBehaviour
 		if (IsUIEnable())
 		{
 			m_CurrentPanelIndex = 1;
-			
-			if (m_NetworkManager)
-			{
-				UpdateServerList(_DeltaTime);
-			}
-			
-			if (m_DisplayServerList != null)
-			{
-				++m_CurrentPanelIndex;
-			}
 		}
 	}
 
 	private void UpdateLevelTransitionRequest(float _DeltaTime)
 	{
+		int playerCount = GetLocalPlayerCount();
+
 		bool nextLevelIsValid = m_LevelManager.IsValidLevelIndex(m_NextLevelIndex);
-		if (nextLevelIsValid)
+		if ( nextLevelIsValid && (playerCount > 0) )
 		{
-			NetworkServer networkServer = m_NetworkManager.GetServer();
-			if (networkServer == null)
-			{
-				//Debug.Log("UpdateLevelTransitionRequest: No Network Server - initialization failed?");
-				EndSequence();
-			}
-			else if (networkServer.IsServerStarted())
-			{
-				NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-				InputDevice localPlayerInput = GetLocalPlayerInputDevice(0);
+			InputDevice localPlayerInput = GetLocalPlayerInputDevice(0);
+			m_PlayerManager.AddLocalPlayerToJoin(localPlayerInput);
 
-				bool isAuthority = m_NetworkManager.IsNetworkAuthorithy();
-				
-				if (m_PlayerManager.HasLocalPlayerJoined(localNetClient, localPlayerInput))
-				{
-					InputDevice[] supportedInputDevices = m_InputManager.GetSupportedInputDevices();
-					
-					int playerCount = GetLocalPlayerCount();
-					for (int playerIndex = 0; playerIndex < playerCount-1; ++playerIndex)
-					{
-						InputDevice availableInput = GetAvailableInputDevice(supportedInputDevices);
-						m_PlayerManager.AddLocalPlayerToJoin(localNetClient, availableInput, isAuthority);
-					}
-
-					ServerEndSequence();
-				}
-				else if (m_PlayerManager.IsLocalPlayerJoining(localNetClient, localPlayerInput) == false)
-				{
-					//@FIXME handle the case where the RPC call to server got lost/discarded?
-					m_PlayerManager.AddLocalPlayerToJoin(localNetClient, localPlayerInput, isAuthority);
-				}
-			}
-		}
-		else
-		{
-			NetworkClient networkClient = m_NetworkManager.GetClient();
-			if (networkClient != null && networkClient.IsConnectedToServer())
+			InputDevice[] supportedInputDevices = m_InputManager.GetSupportedInputDevices();
+			for (int playerIndex = 0; playerIndex < playerCount-1; ++playerIndex)
 			{
-				NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-				InputDevice localPlayerInput = GetLocalPlayerInputDevice(0);
-				
-				if (m_PlayerManager.HasLocalPlayerJoined(localNetClient, localPlayerInput))
-				{
-					ClientEndSequence();
-				}
-				else if (m_PlayerManager.IsLocalPlayerJoining(localNetClient, localPlayerInput) == false)
-				{
-					bool isAuthority = m_NetworkManager.IsNetworkAuthorithy();
-					System.Diagnostics.Debug.Assert(isAuthority == false);
-					//@FIXME handle the case where the RPC call to server got lost/discarded?
-					m_PlayerManager.AddLocalPlayerToJoin(localNetClient, localPlayerInput, isAuthority);
-				}
-				else
-				{
-					//@TODO: add some time out?
-				}
+				InputDevice availableInput = GetAvailableInputDevice(supportedInputDevices);
+				m_PlayerManager.AddLocalPlayerToJoin(availableInput);
 			}
+
+			EndSequence();
 		}
 	}
 	
@@ -471,12 +386,6 @@ public class MainMenu : MonoBehaviour
 	
 	private void PlayButtonPressed()
 	{
-		if (m_NetworkManager != null)
-		{
-			m_NetworkManager.StopServerSearch();
-			m_NetworkManager.StartServer(null, null);
-		}
-		
 		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
 		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
 		if (validInputDevice)
@@ -486,15 +395,6 @@ public class MainMenu : MonoBehaviour
 			RequestLevelTransition(m_SelectSceneIndex);
 			
 			DisableUI();
-		}
-	}
-	
-	private void JoinGameButtonPressed()
-	{
-		if (m_NetworkManager != null)
-		{
-			m_NetworkManager.StartServerSearch();
-			m_TimeSinceLastServerListUpdate = m_ServerListUpdateTimeIntervalInSeconds;
 		}
 	}
 	
@@ -521,38 +421,6 @@ public class MainMenu : MonoBehaviour
 			QuitGame();
 			
 			DisableUI();
-		}
-	}
-	
-	private void ConnectGameButtonPressed()
-	{
-		System.Diagnostics.Debug.Assert(m_NetworkManager != null);
-		System.Diagnostics.Debug.Assert(m_SelectedDisplayedServerIndex >= 0);
-		
-		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
-		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
-		if (validInputDevice)
-		{
-			NetworkServerSearch networkServerSearch = m_NetworkManager.GetServerSearch();
-			if (networkServerSearch != null)
-			{
-				//@FIXME: technically getting an updated list at that point can be a problem because the selected server index might be affected
-				List<NetworkServerSearch.ServerSearchData> serverList = networkServerSearch.GetServerList();
-				int serverCount = serverList.Count;
-				if (m_SelectedDisplayedServerIndex < serverCount)
-				{
-					SetLocalPlayerInputDevice(0, playerInputDevice);
-					
-					NetworkServerSearch.ServerSearchData server = serverList[m_SelectedDisplayedServerIndex];
-					string serverIpAddress = server.m_ServerIpAddressString;
-					int connectPort = server.m_ServerConnectPort;
-					
-					m_NetworkManager.StopServerSearch();
-					m_NetworkManager.ConnectToServer(serverIpAddress, connectPort);
-					
-					DisableUI();
-				}
-			}
 		}
 	}
 
@@ -649,136 +517,7 @@ public class MainMenu : MonoBehaviour
 					
 					mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
 				}
-				
-/*				
-				string createGameButtonLabel = "Create Game";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), createGameButtonLabel))
-				{
-					CreateGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-		
-				string joinGameButtonLabel = "Join Game";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), joinGameButtonLabel))
-				{
-					JoinGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-				
-				string editLevelButtonLabel = "Edit Level";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), editLevelButtonLabel))
-				{
-					EditLevelButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-				
-				string aboutGameButtonLabel = "About";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), aboutGameButtonLabel))
-				{
-					AboutGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-		
-				string exitGameButtonLabel = "Exit";
-				if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), exitGameButtonLabel))
-				{
-					QuitGameButtonPressed();
-				}
-				mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
-*/
-			}
-
-/*			
-			//@HACK temporary server list display solution
-			int joinPanelIndex = 2;
-			if (m_CurrentPanelIndex >= joinPanelIndex)
-			{
-				int joinPanelSlideCount = m_CurrentPanelIndex - joinPanelIndex;
-				int joinPanelOffsetX = centerPanelOffsetX + joinPanelSlideCount * panelSlideOffsetX;
-				int joinPanelOffsetY = centerPanelOffsetY;
-				Rect joinPanel = new Rect( joinPanelOffsetX, joinPanelOffsetY, panelWidth, panelHeight);
-				
-				GUI.Box(joinPanel, "\n<b>Existing servers:</b>");
-				
-				int joinPanelTitleHeight = 40;
-				
-				int joinPanelButtonHeight = 40;
-				int joinPanelButtonWidth = 160;
-				int joinPanelButtonOffsetX = joinPanelOffsetX + (panelWidth - joinPanelButtonWidth) / 2;
-				
-				System.Diagnostics.Debug.Assert(m_DisplayServerList != null);
-				int serverCount = m_DisplayServerList.Length;
-				if (serverCount > 0)
-				{
-					int joinPanelServerListWidth = 180;
-					int joinPanelServerListHeight = 300;
-					
-					int joinPanelServerListOffsetX = joinPanelOffsetX + (panelWidth - joinPanelServerListWidth) / 2;
-					int joinPanelServerListOffsetY = joinPanelOffsetY + joinPanelTitleHeight;
-					
-					DrawServerList(joinPanelServerListOffsetX, joinPanelServerListOffsetY, joinPanelServerListWidth, joinPanelServerListHeight);
-					
-					if (m_SelectedDisplayedServerIndex >= 0 && m_SelectedDisplayedServerIndex < serverCount)
-					{
-						int joinPanelConnectGameButtonOffsetY = joinPanelOffsetY + joinPanelTitleHeight + joinPanelServerListHeight;
-						
-						string connectGameButtonLabel = "Connect Game";
-						if (GUI.Button(new Rect(joinPanelButtonOffsetX, joinPanelConnectGameButtonOffsetY, joinPanelButtonWidth, joinPanelButtonHeight), connectGameButtonLabel))
-						{
-							ConnectGameButtonPressed();
-						}
-					}
-				}
-			}
-*/
-		}
-	}
-	
-	private void UpdateServerList(float _DeltaTime)
-	{
-		System.Diagnostics.Debug.Assert(m_NetworkManager != null);
-		NetworkServerSearch networkServerSearch = m_NetworkManager.GetServerSearch();
-		
-		if (networkServerSearch != null)
-		{
-			m_TimeSinceLastServerListUpdate += _DeltaTime;
-			if ( m_TimeSinceLastServerListUpdate >= m_ServerListUpdateTimeIntervalInSeconds)
-			{
-				List<NetworkServerSearch.ServerSearchData> serverList = networkServerSearch.GetServerList();
-				if (serverList != null)
-				{
-					m_DisplayServerList = serverList.Select(x => x.m_ServerName).ToArray();
-				}
-				else
-				{
-					string[] emptyList = {};
-					m_DisplayServerList = emptyList;
-				}
-				
-				m_TimeSinceLastServerListUpdate = 0.0f;
 			}
 		}
-		else
-		{
-			m_TimeSinceLastServerListUpdate = m_ServerListUpdateTimeIntervalInSeconds;
-			m_DisplayServerList = null;
-		}
-	}
-	
-	private void DrawServerList(int _PanelOffsetX, int _PanelOffsetY, int _PanelWidth, int _PanelHeight)
-	{
-		//@HACK temporary display solution
-		
-		Rect scrollViewRect = new Rect(_PanelOffsetX, _PanelOffsetY, _PanelWidth, _PanelHeight);//Screen.width / 2 + 120, Screen.height / 2 - 200, 200, 400);
-		Rect scrollAreaRect = new Rect (0, 0, _PanelWidth, _PanelHeight);//0, 0, 200, 400);
-		Vector2 scrollPos = m_ScrollPositionServerSelect;
-		bool alwaysShowHorizontalScrollBar = false;
-		bool alwaysShowVerticalScrollBar = false;
-		
-		scrollPos = GUI.BeginScrollView(scrollViewRect, scrollPos, scrollAreaRect, alwaysShowHorizontalScrollBar, alwaysShowVerticalScrollBar);
-		
-			m_SelectedDisplayedServerIndex = GUILayout.SelectionGrid(m_SelectedDisplayedServerIndex, m_DisplayServerList, 1);
-		
-		GUI.EndScrollView();
 	}
 }

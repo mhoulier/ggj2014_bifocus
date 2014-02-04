@@ -140,92 +140,31 @@ public class PlayerManager : MonoBehaviour
 		m_PendingLocalPlayers.Clear();
 	}
 	
-	private Player AddLocalPlayerPendingJoin(NetworkPlayer _LocalNetClient, InputDevice _PlayerInput)
+	private Player AddLocalPlayerPendingJoin(InputDevice _PlayerInput)
 	{
-		NetworkViewID newViewID = Network.AllocateViewID();
-		Player newLocalPlayer = new Player(_LocalNetClient, newViewID, _PlayerInput);
+		Player newLocalPlayer = new Player(_PlayerInput);
 		m_PendingLocalPlayers.Add(newLocalPlayer);
 		
 		return newLocalPlayer;
 	}
 	
-	public void AddLocalPlayerToJoin(NetworkPlayer _LocalNetClient, InputDevice _PlayerInput, bool _IsAuthority)
+	public void AddLocalPlayerToJoin(InputDevice _PlayerInput)
 	{		
-		Player pendingPlayer = AddLocalPlayerPendingJoin(_LocalNetClient, _PlayerInput);
-		System.Diagnostics.Debug.Assert(pendingPlayer.m_NetClient == _LocalNetClient);
+		AddLocalPlayerPendingJoin(_PlayerInput);
 		
 		Debug.Log("Adding local player to join (input: " + _PlayerInput.ToString() + ")");
-		Debug.Log("IP: "+ _LocalNetClient.ipAddress + ", port:" + _LocalNetClient.port + ", NetViewID: " + pendingPlayer.m_NetViewID.ToString());
-		
-		if (_IsAuthority)
-		{
-			//@NOTE: Unity3d network system doesn't support sending RPCs to server from server when using RPCMode.Server (RPCMode.All is fine)
-			PlayerJoinAuthority(pendingPlayer.m_NetClient, pendingPlayer.m_NetViewID);
-		}
-		else
-		{
-			if (m_Players.Count == 0)
-			{
-				networkView.RPC("ClientRequestPlayersJoinAuthority", RPCMode.Server, pendingPlayer.m_NetClient);
-			}
-			networkView.RPC("PlayerJoinAuthority", RPCMode.Server, pendingPlayer.m_NetClient, pendingPlayer.m_NetViewID);
-		}
-	}
-	
-	[RPC]
-	public void ClientRequestPlayersJoinAuthority(NetworkPlayer _NetClient)
-	{
-		Debug.Log("Client requested players join on Authority");
-		Debug.Log("IP: "+ _NetClient.ipAddress + ", port:" + _NetClient.port);
-		
-		List<Player> players = m_Players;
-		foreach (Player player in players)
-		{
-			networkView.RPC("PlayerJoin", _NetClient, player.m_NetClient, player.m_NetViewID);
-		}
-	}
-	
-	[RPC]
-	public void PlayerJoinAuthority(NetworkPlayer _NetClient, NetworkViewID _NetViewID)
-	{
-		Debug.Log("Player join on Authority");
-		Debug.Log("IP: "+ _NetClient.ipAddress + ", port:" + _NetClient.port + ", NetViewID: " + _NetViewID.ToString());
-		
-		//@TODO: any team balancing or sthg to do here?
-		//Remove NPC AIs if needed?
-		
-		//@FIXME: handle case where server is full?
 
-		//player join on server
-		PlayerJoin(_NetClient, _NetViewID);
-		
-		//player join on clients
-		networkView.RPC("PlayerJoin", RPCMode.Others, _NetClient, _NetViewID);
+		PlayerJoin(_PlayerInput);
 	}
-	
-	[RPC]
-	public void PlayerJoin(NetworkPlayer _NetClient, NetworkViewID _NetViewID)
-	{
-		bool localPlayerJoining = (Network.player == _NetClient);
-		if (localPlayerJoining)
-		{
-			LocalPlayerJoin(_NetClient, _NetViewID);
-		}
-		else
-		{
-			RemotePlayerJoin(_NetClient, _NetViewID);
-		}
-	}
-	
-	private void LocalPlayerJoin(NetworkPlayer _NetClient, NetworkViewID _NetViewID)
+
+	private void PlayerJoin(InputDevice _PlayerInput)
 	{
 		Player joiningPlayer = null;
 		foreach(Player pendingPlayer in m_PendingLocalPlayers)
 		{
-			if (pendingPlayer.m_NetViewID == _NetViewID)
-			{
-				System.Diagnostics.Debug.Assert(joiningPlayer.m_NetClient == _NetClient);
-				
+			InputDevice pendingPlayerInput = pendingPlayer.GetPlayerInput();
+			if (pendingPlayerInput == _PlayerInput)
+			{	
 				joiningPlayer = pendingPlayer;
 				break;
 			}
@@ -238,21 +177,10 @@ public class PlayerManager : MonoBehaviour
 			m_PendingLocalPlayers.Remove(joiningPlayer);
 			
 			Debug.Log("Local player joined (input: " + joiningPlayer.GetPlayerInput().ToString() + ")");
-			Debug.Log("IP: "+ _NetClient.ipAddress + ", port:" + _NetClient.port + ", NetViewID: " + _NetViewID.ToString());
 		}
 		else
 		{
 			Debug.Log("Local player couldn't join: missing from the local players pending list!");
-			Debug.Log("IP: "+ _NetClient.ipAddress + ", port:" + _NetClient.port + ", NetViewID: " + _NetViewID.ToString());
 		}
-	}
-	
-	private void RemotePlayerJoin(NetworkPlayer _NetClient, NetworkViewID _NetViewID)
-	{
-		Player joiningPlayer = new Player(_NetClient, _NetViewID, InputDevice.E_InputDeviceNone);
-		m_Players.Add(joiningPlayer);
-		
-		Debug.Log("Remote player joined");
-		Debug.Log("IP: "+ _NetClient.ipAddress + ", port:" + _NetClient.port + ", NetViewID: " + _NetViewID.ToString());
 	}
 }

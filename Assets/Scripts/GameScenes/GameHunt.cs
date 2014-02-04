@@ -42,7 +42,6 @@ public class GameHunt : MonoBehaviour
 	
 	public GameObject m_GameManagerPrefab = null;
 	private LevelManager m_LevelManager = null;
-	private NetworkManager m_NetworkManager = null;
 	private InputManager m_InputManager = null;
 	private MenuManager m_MenuManager = null;
 	private PlayerManager m_PlayerManager = null;
@@ -76,15 +75,12 @@ public class GameHunt : MonoBehaviour
 			List<Player> players = m_PlayerManager.GetPlayers();
 			if (players.Count == 0)
 			{
-				NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-				bool isAuthority = true;
-
 				PlayerSpawner onGroundSpawner = PlayerSpawner.FindPlayerSpawner(PlayerClass.E_ClassOnGround);
 				PlayerSpawner highUpSpawner = PlayerSpawner.FindPlayerSpawner(PlayerClass.E_ClassHighUp);
 				if (onGroundSpawner != null && highUpSpawner != null)
 				{
-					m_PlayerManager.AddLocalPlayerToJoin(localNetClient, m_DebugOnGroundPlayerInput, isAuthority);
-					m_PlayerManager.AddLocalPlayerToJoin(localNetClient, m_DebugHighUpPlayerInput, isAuthority);
+					m_PlayerManager.AddLocalPlayerToJoin(m_DebugOnGroundPlayerInput);
+					m_PlayerManager.AddLocalPlayerToJoin(m_DebugHighUpPlayerInput);
 					
 					players = m_PlayerManager.GetPlayers();
 					players[0].SetPlayerClass(PlayerClass.E_ClassOnGround);
@@ -115,12 +111,6 @@ public class GameHunt : MonoBehaviour
 			levelManager = gameManager.GetComponent<LevelManager>();
 			
 			Debug.Log("Instantiating gameManager!");
-		}
-		
-		NetworkManager networkManager = (NetworkManager)FindObjectOfType( typeof(NetworkManager) );
-		if (networkManager == null)
-		{
-			Debug.Log("GameManager prefab is missing a NetworkManager component!");
 		}
 		
 		InputManager inputManager = (InputManager)FindObjectOfType( typeof(InputManager) );
@@ -157,46 +147,19 @@ public class GameHunt : MonoBehaviour
 		}
 
 		m_LevelManager = levelManager;
-		m_NetworkManager = networkManager;
 		m_InputManager = inputManager;
 		m_MenuManager = menuManager;
 		m_PlayerManager = playerManager;
 		m_TimeManager = timeManager;
 		
-		m_IsActiveSequence = (m_LevelManager != null) && (m_NetworkManager != null) && (m_InputManager != null) && (m_MenuManager != null) && (m_PlayerManager != null);
+		m_IsActiveSequence = (m_LevelManager != null) && (m_InputManager != null) && (m_MenuManager != null) && (m_PlayerManager != null);
 		
 		InitCamera();
 	}
 
 	void InitCamera()
 	{
-/*
-		//GameObject mainCameraObject = GameObject.FindWithTag("MainCamera");
-		Camera mainCamera = Camera.main;
-		ThirdPersonCamera thirdPersonCamera = mainCamera.gameObject.GetComponent<ThirdPersonCamera>();
 
-		//@HACK
-		if (thirdPersonCamera == null)
-		{
-			thirdPersonCamera = mainCamera.gameObject.AddComponent<ThirdPersonCamera>();
-			thirdPersonCamera.m_DistanceAway = 12;
-			thirdPersonCamera.m_DistanceUp = 5;
-			thirdPersonCamera.m_SmoothFactor = 3.0f;
-			thirdPersonCamera.m_UseLookDir = true;
-			thirdPersonCamera.m_UseFollowPositionMask = true;
-			thirdPersonCamera.m_LookDir.x = 0.0f;
-			thirdPersonCamera.m_LookDir.y = 0.0f;
-			thirdPersonCamera.m_LookDir.z = 1.0f;
-			thirdPersonCamera.m_FollowPositionMask.x = 0.0f;
-			thirdPersonCamera.m_FollowPositionMask.y = 0.0f;
-			thirdPersonCamera.m_FollowPositionMask.z = 1.0f;
-		}
-		
-		if ( m_CameraInitFollowTarget != null )
-		{
-			thirdPersonCamera.SetFollowTarget(m_CameraInitFollowTarget);
-		}
-*/
 	}
 
 	private void UpdateCamera()
@@ -236,26 +199,6 @@ public class GameHunt : MonoBehaviour
 				}
 			}
 		}
-
-		//@TODO: improve camera update to adapt to multiple local players
-/*		
-		Camera mainCamera = Camera.main;
-		ThirdPersonFollowCamera thirdPersonCamera = mainCamera.gameObject.GetComponent<ThirdPersonFollowCamera>();
-		
-		NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-		
-		List<Player> players = m_PlayerManager.GetPlayers();
-		foreach(Player player in players)
-		{
-			GameObject playerInstance = player.GetPlayerInstance();
-			bool isLocalPlayer = (player.m_NetClient == localNetClient);
-			
-			if (playerInstance != null && isLocalPlayer)
-			{
-				thirdPersonCamera.SetFollowTarget(playerInstance.transform);
-			}
-		}
-*/
 	}
 
 	void EndSequence()
@@ -263,13 +206,6 @@ public class GameHunt : MonoBehaviour
 		m_IsActiveSequence = false;
 		
 		m_LevelManager.LoadLevel(m_NextLevelIndex);
-	}
-	
-	void ServerEndSequence()
-	{
-		m_IsActiveSequence = false;
-		
-		m_LevelManager.ServerLoadLevel(m_NextLevelIndex);
 	}
 
 	private void LoadingFinished()
@@ -356,71 +292,6 @@ public class GameHunt : MonoBehaviour
 		ChangeGameState(GameState.E_GamePlaying);
 
 		Debug.Log("StartGame");
-		
-		/*
-		NetworkPlayer localNetClient = m_NetworkManager.GetLocalNetClient();
-		
-		List<Player> players = m_PlayerManager.GetPlayers();
-		foreach(Player player in players)
-		{
-			bool isLocalPlayer = (player.m_NetClient == localNetClient);
-			GameObject playerInstance = player.GetPlayerInstance();
-			
-			if (isLocalPlayer && playerInstance != null)
-			{
-				GamePlayerController playerController = playerInstance.GetComponent<GamePlayerController>();
-				System.Diagnostics.Debug.Assert(playerController != null);
-				
-				playerController.EnablePlayerControllerUpdate();
-				
-				FollowLane followLaneBehaviour = playerInstance.GetComponent<FollowLane>();
-				System.Diagnostics.Debug.Assert(followLaneBehaviour != null);
-				
-				followLaneBehaviour.EnableFollowLaneUpdate();
-				
-				FollowCamera followCamera = playerInstance.GetComponent<FollowCamera>();
-				if (followCamera != null)
-				{
-					Camera mainCamera = Camera.main;
-					followCamera.SetFollowCamera(mainCamera);
-				}
-			}
-		}
-		
-		//@TODO - Enable NPC update
-		List<GameObject> spawnedAIs = m_SpawnedAIs;
-		
-		GameObject villainInstance = FindVillainInstanceInPlayers(players);
-		if (villainInstance == null)
-		{
-			villainInstance = FindVillainInstanceInAIs(spawnedAIs);
-		}
-		
-		foreach(GameObject spawnedAI in spawnedAIs)
-		{
-			NetworkView aiNetView = spawnedAI.GetComponent<NetworkView>();
-			if (aiNetView && aiNetView.viewID.isMine)
-			{
-				GameAIEscapeController aiEscape = spawnedAI.GetComponent<GameAIEscapeController>();
-				if (aiEscape != null)
-				{
-					aiEscape.EnableAIControllerUpdate();
-				}
-				
-				GameAIFollowController aiFollow = spawnedAI.GetComponent<GameAIFollowController>();
-				if (aiFollow != null)
-				{
-					aiFollow.EnableAIControllerUpdate();
-					aiFollow.SetFollowTarget(villainInstance);
-				}
-				
-				FollowLane followLaneBehaviour = spawnedAI.GetComponent<FollowLane>();
-				System.Diagnostics.Debug.Assert(followLaneBehaviour != null);
-				
-				followLaneBehaviour.EnableFollowLaneUpdate();
-			}
-		}
-*/
 		
 		UpdateCamera();
 	}
