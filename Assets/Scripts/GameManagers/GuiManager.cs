@@ -3,7 +3,7 @@ using System.Collections;
 
 public class GuiManager : MonoBehaviour
 {
-	static public void GUIDrawTextureOnScreen(Texture2D _Texture)
+	public static void GUIDrawTextureOnScreen(Texture2D _Texture)
 	{
 		float texHeight = _Texture.height;
 		float texWidth = _Texture.width;

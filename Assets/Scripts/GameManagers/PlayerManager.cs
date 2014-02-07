@@ -149,7 +149,7 @@ public class PlayerManager : MonoBehaviour
 	}
 	
 	public void AddLocalPlayerToJoin(InputDevice _PlayerInput)
-	{		
+	{
 		AddLocalPlayerPendingJoin(_PlayerInput);
 		
 		Debug.Log("Adding local player to join (input: " + _PlayerInput.ToString() + ")");
@@ -164,7 +164,7 @@ public class PlayerManager : MonoBehaviour
 		{
 			InputDevice pendingPlayerInput = pendingPlayer.GetPlayerInput();
 			if (pendingPlayerInput == _PlayerInput)
-			{	
+			{
 				joiningPlayer = pendingPlayer;
 				break;
 			}
