@@ -107,13 +107,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c72cadb32a7d8449b92d1aae0a2a007, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_KeyToPressToValidateMenu: 13
-  m_AlternateKeyToPressToValidateMenu: 32
-  m_JoystickButtonIndexToValidateMenu: 0
-  m_KeyToPressToCancelMenu: 27
-  m_JoystickButtonIndexToCancelMenu: 1
-  m_KeyToPressToPauseGame: 32
-  m_JoystickButtonIndexToPauseGame: 7
+  m_MenuActions:
+  - m_MenuActionType: 1
+    m_MouseButtonIndexToPress: 0
+    m_MouseButtonPressedEvent: 2
+    m_KeyToPress: 13
+    m_KeyPressedEvent: 1
+    m_AlternateKeyToPress: 32
+    m_AlternateKeyPressedEvent: 1
+    m_JoystickButtonIndexToPress: 0
+    m_JoystickButtonPressedEvent: 1
+  - m_MenuActionType: 2
+    m_MouseButtonIndexToPress: 0
+    m_MouseButtonPressedEvent: 0
+    m_KeyToPress: 27
+    m_KeyPressedEvent: 1
+    m_AlternateKeyToPress: 8
+    m_AlternateKeyPressedEvent: 1
+    m_JoystickButtonIndexToPress: 1
+    m_JoystickButtonPressedEvent: 1
+  - m_MenuActionType: 3
+    m_MouseButtonIndexToPress: 0
+    m_MouseButtonPressedEvent: 0
+    m_KeyToPress: 32
+    m_KeyPressedEvent: 1
+    m_AlternateKeyToPress: 27
+    m_AlternateKeyPressedEvent: 1
+    m_JoystickButtonIndexToPress: 7
+    m_JoystickButtonPressedEvent: 1
   m_MenuInputAxisLatency: .200000003
   m_MenuInputAxisThreshold: .100000001
   m_MenuInputVerticalAxisJoystickInvert: 1

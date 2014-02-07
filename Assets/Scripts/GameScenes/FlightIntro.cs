@@ -77,7 +77,7 @@ public class FlightIntro : MonoBehaviour
 
 	private void UpdateInputs()
 	{
-		bool skipIntro = m_MenuManager.IsValidateMenuPressed();
+		bool skipIntro = m_MenuManager.IsMenuActionInputPressed (MenuActionType.E_MenuValidate);
 		if (skipIntro)
 		{
 			RequestLevelTransition();

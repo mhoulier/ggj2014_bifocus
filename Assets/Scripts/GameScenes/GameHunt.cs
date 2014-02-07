@@ -375,7 +375,7 @@ public class GameHunt : MonoBehaviour
 		foreach (Player player in players)
 		{
 			InputDevice playerInput = player.GetPlayerInput();
-			bool playerRequestedPause = m_MenuManager.IsPauseGamePressed(playerInput);
+			bool playerRequestedPause = m_MenuManager.IsMenuActionInputPressed(MenuActionType.E_MenuPause, playerInput);
 			if (playerRequestedPause)
 			{
 				pauseGame = true;

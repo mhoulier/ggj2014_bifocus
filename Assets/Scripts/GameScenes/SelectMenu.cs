@@ -377,7 +377,7 @@ public class SelectMenu : MonoBehaviour
 
 		bool mouseMoved = inputMgr.IsMouseMoved();
 		
-		bool validateMenuPressed = menuMgr.IsValidateMenuPressed(menuControllerDevice);
+		bool validateMenuPressed = menuMgr.IsMenuActionInputPressed(MenuActionType.E_MenuValidate, menuControllerDevice);
 		
 		bool inputDown = menuMgr.IsMenuInputDownPressed(menuControllerDevice);
 		bool inputUp = menuMgr.IsMenuInputUpPressed(menuControllerDevice);
@@ -468,7 +468,7 @@ public class SelectMenu : MonoBehaviour
 			int listElementIndex = m_FocusOnButtonIndex;
 			int listElementCount = buttonCount;
 			
-			focusButtonIndex = m_MenuManager.ComputeNewListElementIndex(listElementIndex, listElementCount, inputPrev, inputNext);
+			focusButtonIndex = MenuManager.ComputeNewListElementIndex(listElementIndex, listElementCount, inputPrev, inputNext);
 		}
 		
 		if (focusButtonIndex != m_FocusOnButtonIndex)

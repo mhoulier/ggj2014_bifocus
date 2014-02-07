@@ -255,7 +255,7 @@ public class MainMenu : MonoBehaviour
 		
 		bool mouseMoved = inputMgr.IsMouseMoved();
 		
-		bool validateMenuPressed = menuMgr.IsValidateMenuPressed();
+		bool validateMenuPressed = menuMgr.IsMenuActionInputPressed(MenuActionType.E_MenuValidate);
 		
 		bool inputDown = menuMgr.IsMenuInputDownPressed();
 		bool inputUp = menuMgr.IsMenuInputUpPressed();
@@ -310,21 +310,9 @@ public class MainMenu : MonoBehaviour
 
 	private void UpdateLevelTransitionRequest(float _DeltaTime)
 	{
-		int playerCount = GetLocalPlayerCount();
-
 		bool nextLevelIsValid = m_LevelManager.IsValidLevelIndex(m_NextLevelIndex);
-		if ( nextLevelIsValid && (playerCount > 0) )
+		if ( nextLevelIsValid )
 		{
-			InputDevice localPlayerInput = GetLocalPlayerInputDevice(0);
-			m_PlayerManager.AddLocalPlayerToJoin(localPlayerInput);
-
-			InputDevice[] supportedInputDevices = m_InputManager.GetSupportedInputDevices();
-			for (int playerIndex = 0; playerIndex < playerCount-1; ++playerIndex)
-			{
-				InputDevice availableInput = GetAvailableInputDevice(supportedInputDevices);
-				m_PlayerManager.AddLocalPlayerToJoin(availableInput);
-			}
-
 			EndSequence();
 		}
 	}
@@ -357,8 +345,8 @@ public class MainMenu : MonoBehaviour
 			
 			int listElementIndex = m_FocusOnButtonIndex;
 			int listElementCount = buttonCount;
-			
-			focusButtonIndex = m_MenuManager.ComputeNewListElementIndex(listElementIndex, listElementCount, inputPrev, inputNext);
+
+			focusButtonIndex = MenuManager.ComputeNewListElementIndex(listElementIndex, listElementCount, inputPrev, inputNext);
 		}
 		
 		if (focusButtonIndex != m_FocusOnButtonIndex)
@@ -382,15 +370,23 @@ public class MainMenu : MonoBehaviour
 		m_NextLevelIndex = _LevelIndex;
 	}
 	
-	
-	
 	private void PlayButtonPressed()
 	{
 		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
 		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
-		if (validInputDevice)
+		int playerCount = GetLocalPlayerCount();
+
+		if (validInputDevice && playerCount > 0)
 		{
 			SetLocalPlayerInputDevice(0, playerInputDevice);
+			m_PlayerManager.AddLocalPlayerToJoin(playerInputDevice);
+			
+			InputDevice[] supportedInputDevices = m_InputManager.GetSupportedInputDevices();
+			for (int playerIndex = 1; playerIndex < playerCount; ++playerIndex)
+			{
+				InputDevice availableInput = GetAvailableInputDevice(supportedInputDevices);
+				m_PlayerManager.AddLocalPlayerToJoin(availableInput);
+			}
 			
 			RequestLevelTransition(m_SelectSceneIndex);
 			

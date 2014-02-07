@@ -1,27 +1,28 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+public enum MenuActionType
+{
+	E_MenuActionNone,
+	E_MenuValidate,
+	E_MenuCancel,
+	E_MenuPause,
+};
+
+public enum MenuInputPressedEvent
+{
+	E_MenuInputPressedNone,
+	E_MenuInputPressedOnDown,
+	E_MenuInputPressedOnUp,
+};
+
 public class MenuManager : MonoBehaviour
 {
 	private InputManager m_InputManager = null;
 
 	[SerializeField]
-	private KeyCode m_KeyToPressToValidateMenu = KeyCode.Return;
-	[SerializeField]
-	private KeyCode m_AlternateKeyToPressToValidateMenu = KeyCode.Space;
-	[SerializeField]
-	private int m_JoystickButtonIndexToValidateMenu = 0;
-	
-	[SerializeField]
-	private KeyCode m_KeyToPressToCancelMenu = KeyCode.Escape;
-	[SerializeField]
-	private int m_JoystickButtonIndexToCancelMenu = 1;
+	private MenuAction[] m_MenuActions;
 
-	[SerializeField]
-	private KeyCode m_KeyToPressToPauseGame = KeyCode.Space;
-	[SerializeField]
-	private int m_JoystickButtonIndexToPauseGame = 1;
-	
 	[SerializeField]
 	private float m_MenuInputAxisLatency = 0.0f;
 	[SerializeField]
@@ -34,13 +35,6 @@ public class MenuManager : MonoBehaviour
 	
 	public float GetMenuInputAxisLatency() { return m_MenuInputAxisLatency; }
 
-	private KeyCode m_AnyJoystickButtonToValidateMenu = KeyCode.None;
-	private KeyCode[] m_JoystickButtonToValidateMenu = null;
-	private KeyCode m_AnyJoystickButtonToCancelMenu = KeyCode.None;
-	private KeyCode[] m_JoystickButtonToCancelMenu = null;
-	private KeyCode m_AnyJoystickButtonToPauseGame = KeyCode.None;
-	private KeyCode[] m_JoystickButtonToPauseGame = null;
-
 	void Start()
 	{
 		bool menuInputInitialized = false;
@@ -48,7 +42,7 @@ public class MenuManager : MonoBehaviour
 		InputManager inputManager = (InputManager)FindObjectOfType( typeof(InputManager) );
 		if (inputManager != null)
 		{
-			InitMenuInput(inputManager);
+			InitMenuActions(inputManager);
 
 			m_InputManager = inputManager;
 			menuInputInitialized = true;
@@ -60,49 +54,12 @@ public class MenuManager : MonoBehaviour
 
 		enabled = menuInputInitialized;
 	}
-	
-	private void InitMenuInput(InputManager _InputManager)
+
+	private void InitMenuActions(InputManager _InputManager)
 	{
-		string anyJoystickButtonNameBase = _InputManager.GetAnyJoystickButtonNameBase();
-
-		string joystickValidateButtonIndexString = m_JoystickButtonIndexToValidateMenu.ToString();
-		
-		string anyJoystickValidateButtonName = anyJoystickButtonNameBase + joystickValidateButtonIndexString;
-		KeyCode anyJoystickValidateButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), anyJoystickValidateButtonName);
-		m_AnyJoystickButtonToValidateMenu = anyJoystickValidateButton;
-		
-		string joystickCancelButtonIndexString = m_JoystickButtonIndexToCancelMenu.ToString();
-		
-		string anyJoystickCancelButtonName = anyJoystickButtonNameBase + joystickCancelButtonIndexString;
-		KeyCode anyJoystickCancelButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), anyJoystickCancelButtonName);
-		m_AnyJoystickButtonToCancelMenu = anyJoystickCancelButton;
-
-		string joystickPauseButtonIndexString = m_JoystickButtonIndexToPauseGame.ToString();
-		
-		string anyJoystickPauseButtonName = anyJoystickButtonNameBase + joystickPauseButtonIndexString;
-		KeyCode anyJoystickPauseButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), anyJoystickPauseButtonName);
-		m_AnyJoystickButtonToPauseGame = anyJoystickPauseButton;
-		
-		int joystickCount = _InputManager.GetSupportedJoystickCount();
-		m_JoystickButtonToValidateMenu = new KeyCode[joystickCount];
-		m_JoystickButtonToCancelMenu = new KeyCode[joystickCount];
-		m_JoystickButtonToPauseGame = new KeyCode[joystickCount];
-		
-		for (int joystickIndex = 0; joystickIndex < joystickCount; ++joystickIndex)
+		foreach(MenuAction menuAction in m_MenuActions)
 		{
-			string joystickButtonNameBase = _InputManager.GetJoystickButtonNameBase(joystickIndex);
-			
-			string joystickValidateButtonName = joystickButtonNameBase + joystickValidateButtonIndexString;
-			KeyCode joystickValidateButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), joystickValidateButtonName);
-			m_JoystickButtonToValidateMenu[joystickIndex] = joystickValidateButton;
-			
-			string joystickCancelButtonName = joystickButtonNameBase + joystickCancelButtonIndexString;
-			KeyCode joystickCancelButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), joystickCancelButtonName);
-			m_JoystickButtonToCancelMenu[joystickIndex] = joystickCancelButton;
-
-			string joystickPauseButtonName = joystickButtonNameBase + joystickPauseButtonIndexString;
-			KeyCode joystickPauseButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), joystickPauseButtonName);
-			m_JoystickButtonToPauseGame[joystickIndex] = joystickPauseButton;
+			menuAction.InitMenuInputs(_InputManager);
 		}
 	}
 
@@ -110,295 +67,59 @@ public class MenuManager : MonoBehaviour
 	{
 	
 	}
-
-	public bool IsValidateMenuPressed()
-	{
-		InputManager inputMgr = m_InputManager;
-
-		//bool supportMouse = IsInputDeviceValid(InputDevice.E_InputDeviceMouse);
-		bool supportKeyboard = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceKeyboard)
-			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceMouseAndKeyboard);
-		
-		bool supportKeyboardAlt = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceKeyboardAlternate)
-			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceMouseAndKeyboardAlternate);
-		
-		bool supportJoystick = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_1)
-			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_2)
-				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_3)
-				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_4);
-		
-		//@HACK: not including mouse clicks which will be handled automatically when clicking on Unity3d GUI button
-		//@FIXME: need to find a proper solution for handling menu inputs in a common way for both mouse and other input devices
-		
-		//bool mouseClicked = supportMouse && IsValidateMenuPressedForMouse();
-		bool keyboardPressed = (supportKeyboard && IsValidateMenuPressedForKeyboard())
-			|| (supportKeyboardAlt && IsValidateMenuPressedForKeyboardAlternate());
-		bool joystickPressed = supportJoystick && IsValidateMenuPressedForAnyJoystick();
-		bool validateMenuPressed = /*mouseClicked ||*/ keyboardPressed || joystickPressed;
-		
-		return validateMenuPressed;
-	}
-	
-	public bool IsValidateMenuPressed(InputDevice _InputDevice)
-	{
-		InputManager inputMgr = m_InputManager;
-
-		bool validateMenuPressed = false;
-
-		bool validDevice = inputMgr.IsInputDeviceValid(_InputDevice);
-		if (validDevice)
-		{
-			switch (_InputDevice)
-			{
-			case InputDevice.E_InputDeviceMouse:
-				validateMenuPressed = IsValidateMenuPressedForMouse();
-				break;
-			case InputDevice.E_InputDeviceKeyboard:
-				validateMenuPressed = IsValidateMenuPressedForKeyboard();
-				break;
-			case InputDevice.E_InputDeviceKeyboardAlternate:
-				validateMenuPressed = IsValidateMenuPressedForKeyboardAlternate();
-				break;
-			case InputDevice.E_InputDeviceMouseAndKeyboard:
-				validateMenuPressed = IsValidateMenuPressedForMouse() || IsValidateMenuPressedForKeyboard();
-				break;
-			case InputDevice.E_InputDeviceMouseAndKeyboardAlternate:
-				validateMenuPressed = IsValidateMenuPressedForMouse() || IsValidateMenuPressedForKeyboardAlternate();
-				break;
-			case InputDevice.E_InputDeviceGamepad_1:
-				validateMenuPressed = IsValidateMenuPressedForJoystick(0);
-				break;
-			case InputDevice.E_InputDeviceGamepad_2:
-				validateMenuPressed = IsValidateMenuPressedForJoystick(1);
-				break;
-			case InputDevice.E_InputDeviceGamepad_3:
-				validateMenuPressed = IsValidateMenuPressedForJoystick(2);
-				break;
-			case InputDevice.E_InputDeviceGamepad_4:
-				validateMenuPressed = IsValidateMenuPressedForJoystick(3);
-				break;	
-			case InputDevice.E_InputDeviceTouch:
-				//@TODO
-				break;
-			}
-		}
-		
-		return validateMenuPressed;
-	}
-	
-	private bool IsValidateMenuPressedForMouse()
-	{
-		bool mouseClicked = Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1) || Input.GetMouseButtonUp(2);
-		return mouseClicked;
-	}
-	
-	private bool IsValidateMenuPressedForKeyboard()
-	{
-		bool keyboardPressed = Input.GetKeyDown(m_KeyToPressToValidateMenu);
-		return keyboardPressed;
-	}
-	
-	private bool IsValidateMenuPressedForKeyboardAlternate()
-	{
-		bool keyboardPressed = Input.GetKeyDown(m_AlternateKeyToPressToValidateMenu);
-		return keyboardPressed;
-	}
-	
-	private bool IsValidateMenuPressedForAnyJoystick()
-	{
-		bool joystickPressed = Input.GetKeyDown(m_AnyJoystickButtonToValidateMenu);
-		return joystickPressed;
-	}
-	
-	private bool IsValidateMenuPressedForJoystick(int _JoystickIndex)
-	{
-		KeyCode joystickKey = m_JoystickButtonToValidateMenu[_JoystickIndex];
-		bool joystickPressed = Input.GetKeyDown(joystickKey);
-		return joystickPressed;
-	}
-	
-	public bool IsCancelMenuPressed()
-	{
-		InputManager inputMgr = m_InputManager;
-
-		//bool supportMouse = IsInputDeviceValid(InputDevice.E_InputDeviceMouse);
-		bool supportKeyboard = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceKeyboard)
-			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceMouseAndKeyboard);
-		//bool supportKeyboardAlt = IsInputDeviceValid(InputDevice.E_InputDeviceKeyboardAlternate);
-		bool supportJoystick = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_1)
-			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_2)
-				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_3)
-				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_4);
-		
-		//@HACK: not including mouse clicks which will be handled automatically when clicking on Unity3d GUI button
-		//@FIXME: need to find a proper solution for handling menu inputs in a common way for both mouse and other input devices
-		//@TODO: add alternate keyboard cancel key?
-		
-		//bool mouseClicked = supportMouse && IsCancelMenuPressedForMouse();
-		bool keyboardPressed = supportKeyboard && IsCancelMenuPressedForKeyboard();
-		bool joystickPressed = supportJoystick && IsCancelMenuPressedForAnyJoystick();
-		bool cancelMenuPressed = /*mouseClicked ||*/ keyboardPressed || joystickPressed;
-		
-		return cancelMenuPressed;
-	}
-	
-	public bool IsCancelMenuPressed(InputDevice _InputDevice)
-	{
-		InputManager inputMgr = m_InputManager;
-
-		bool cancelMenuPressed = false;
-		
-		bool validDevice = inputMgr.IsInputDeviceValid(_InputDevice);	
-		if (validDevice)
-		{
-			switch (_InputDevice)
-			{
-			case InputDevice.E_InputDeviceMouse:
-				//@TODO: do we want cancel button on mouse?
-				break;
-			case InputDevice.E_InputDeviceKeyboard:
-				cancelMenuPressed = IsCancelMenuPressedForKeyboard();
-				break;
-			case InputDevice.E_InputDeviceKeyboardAlternate:
-				//@TODO: should match E_InputDeviceMouseAndKeyboardAlternate
-				break;
-			case InputDevice.E_InputDeviceMouseAndKeyboard:
-				cancelMenuPressed = IsCancelMenuPressedForKeyboard();
-				break;
-			case InputDevice.E_InputDeviceMouseAndKeyboardAlternate:
-				//@TODO: should match E_InputDeviceKeyboardAlternate
-				break;
-			case InputDevice.E_InputDeviceGamepad_1:
-				cancelMenuPressed = IsCancelMenuPressedForJoystick(0);
-				break;
-			case InputDevice.E_InputDeviceGamepad_2:
-				cancelMenuPressed = IsCancelMenuPressedForJoystick(1);
-				break;
-			case InputDevice.E_InputDeviceGamepad_3:
-				cancelMenuPressed = IsCancelMenuPressedForJoystick(2);
-				break;
-			case InputDevice.E_InputDeviceGamepad_4:
-				cancelMenuPressed = IsCancelMenuPressedForJoystick(3);
-				break;	
-			case InputDevice.E_InputDeviceTouch:
-				//@TODO
-				break;
-			}
-		}
-		
-		return cancelMenuPressed;
-	}
-	
-	private bool IsCancelMenuPressedForKeyboard()
-	{
-		bool keyboardPressed = Input.GetKeyDown(m_KeyToPressToCancelMenu);
-		return keyboardPressed;
-	}
-	
-	private bool IsCancelMenuPressedForAnyJoystick()
-	{
-		bool joystickPressed = Input.GetKeyDown(m_AnyJoystickButtonToCancelMenu);
-		return joystickPressed;
-	}
-	
-	private bool IsCancelMenuPressedForJoystick(int _JoystickIndex)
-	{
-		KeyCode joystickKey = m_JoystickButtonToCancelMenu[_JoystickIndex];
-		bool joystickPressed = Input.GetKeyDown(joystickKey);
-		return joystickPressed;
-	}
 /*
-	public bool IsPauseGamePressed()
+	private int GetMenuActionIndex(MenuActionType _MenuActionType)
 	{
-		InputManager inputMgr = m_InputManager;
-		
-		//bool supportMouse = IsInputDeviceValid(InputDevice.E_InputDeviceMouse);
-		bool supportKeyboard = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceKeyboard)
-			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceMouseAndKeyboard);
-		//bool supportKeyboardAlt = IsInputDeviceValid(InputDevice.E_InputDeviceKeyboardAlternate);
-		bool supportJoystick = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_1)
-			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_2)
-				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_3)
-				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_4);
-		
-		//@HACK: not including mouse clicks which will be handled automatically when clicking on Unity3d GUI button
-		//@FIXME: need to find a proper solution for handling menu inputs in a common way for both mouse and other input devices
-		//@TODO: add alternate keyboard cancel key?
-		
-		//bool mouseClicked = supportMouse && IsCancelMenuPressedForMouse();
-		bool keyboardPressed = supportKeyboard && IsCancelMenuPressedForKeyboard();
-		bool joystickPressed = supportJoystick && IsCancelMenuPressedForAnyJoystick();
-		bool cancelMenuPressed = mouseClicked || keyboardPressed || joystickPressed;
-		
-		return cancelMenuPressed;
-	}
-*/	
-	public bool IsPauseGamePressed(InputDevice _InputDevice)
-	{
-		InputManager inputMgr = m_InputManager;
-		
-		bool pauseGamePressed = false;
-		
-		bool validDevice = inputMgr.IsInputDeviceValid(_InputDevice);	
-		if (validDevice)
+		int menuActionIndex = -1;
+
+		const int actionCount = m_MenuActions.Length;
+		for (int actionIndex = 0; actionIndex < actionCount; ++actionIndex)
 		{
-			switch (_InputDevice)
+			MenuAction action = m_MenuActions[actionIndex];
+			if (action.GetMenuActionType() == _MenuActionType)
 			{
-			case InputDevice.E_InputDeviceMouse:
-				//@TODO: do we want cancel button on mouse?
+				menuActionIndex = actionIndex;
 				break;
-			case InputDevice.E_InputDeviceKeyboard:
-				pauseGamePressed = IsPauseGamePressedForKeyboard();
+			}
+		}
+
+		return menuActionIndex;
+	}
+*/
+	public bool IsMenuActionInputPressed(MenuActionType _MenuActionType)
+	{
+		InputManager inputMgr = m_InputManager;
+
+		bool menuActionPressed = false;
+		foreach(MenuAction action in m_MenuActions)
+		{
+			if (action.GetMenuActionType() == _MenuActionType)
+			{
+				menuActionPressed = action.IsInputPressed(inputMgr);
 				break;
-			case InputDevice.E_InputDeviceKeyboardAlternate:
-				//@TODO: should match E_InputDeviceMouseAndKeyboardAlternate
-				break;
-			case InputDevice.E_InputDeviceMouseAndKeyboard:
-				pauseGamePressed = IsPauseGamePressedForKeyboard();
-				break;
-			case InputDevice.E_InputDeviceMouseAndKeyboardAlternate:
-				//@TODO: should match E_InputDeviceKeyboardAlternate
-				break;
-			case InputDevice.E_InputDeviceGamepad_1:
-				pauseGamePressed = IsPauseGamePressedForJoystick(0);
-				break;
-			case InputDevice.E_InputDeviceGamepad_2:
-				pauseGamePressed = IsPauseGamePressedForJoystick(1);
-				break;
-			case InputDevice.E_InputDeviceGamepad_3:
-				pauseGamePressed = IsPauseGamePressedForJoystick(2);
-				break;
-			case InputDevice.E_InputDeviceGamepad_4:
-				pauseGamePressed = IsPauseGamePressedForJoystick(3);
-				break;	
-			case InputDevice.E_InputDeviceTouch:
-				//@TODO
+			}
+		}
+
+		return menuActionPressed;
+	}
+
+	public bool IsMenuActionInputPressed(MenuActionType _MenuActionType, InputDevice _InputDevice)
+	{
+		InputManager inputMgr = m_InputManager;
+		
+		bool menuActionPressed = false;
+		foreach(MenuAction action in m_MenuActions)
+		{
+			if (action.GetMenuActionType() == _MenuActionType)
+			{
+				menuActionPressed = action.IsInputPressed(inputMgr, _InputDevice);
 				break;
 			}
 		}
 		
-		return pauseGamePressed;
+		return menuActionPressed;
 	}
-	
-	private bool IsPauseGamePressedForKeyboard()
-	{
-		bool keyboardPressed = Input.GetKeyDown(m_KeyToPressToPauseGame);
-		return keyboardPressed;
-	}
-	
-	private bool IsPauseGamePressedForAnyJoystick()
-	{
-		bool joystickPressed = Input.GetKeyDown(m_AnyJoystickButtonToPauseGame);
-		return joystickPressed;
-	}
-	
-	private bool IsPauseGamePressedForJoystick(int _JoystickIndex)
-	{
-		KeyCode joystickKey = m_JoystickButtonToPauseGame[_JoystickIndex];
-		bool joystickPressed = Input.GetKeyDown(joystickKey);
-		return joystickPressed;
-	}
-	
+
 	private bool IsMenuInputVerticalDown(float _InputVertical)
 	{
 		bool inputDown = (_InputVertical < -m_MenuInputAxisThreshold);
@@ -615,7 +336,7 @@ public class MenuManager : MonoBehaviour
 		InputDevice[] supportedDevices = inputMgr.GetSupportedInputDevices();
 		foreach(InputDevice supportedDevice in supportedDevices)
 		{
-			bool validateMenuPressed = IsValidateMenuPressed(supportedDevice);
+			bool validateMenuPressed = IsMenuActionInputPressed(MenuActionType.E_MenuValidate, supportedDevice);
 			if (validateMenuPressed)
 			{
 				playerInputDevice = supportedDevice;
@@ -633,7 +354,7 @@ public class MenuManager : MonoBehaviour
 		return playerInputDevice;
 	}
 	
-	public int ComputeNewListElementIndex(int _ListElementIndex, int _ListElementCount, bool _InputPrevious, bool _InputNext)
+	public static int ComputeNewListElementIndex(int _ListElementIndex, int _ListElementCount, bool _InputPrevious, bool _InputNext)
 	{
 		int elementIndex = _ListElementIndex;
 		int elementCount = _ListElementCount;
@@ -654,7 +375,7 @@ public class MenuManager : MonoBehaviour
 		return elementIndex;
 	}
 	
-	public int ComputeNewGridElementIndex(int _GridElementIndex, int _GridElementCount, int _GridColumnCount, bool _InputPreviousRow, bool _InputNextRow, bool _InputPreviousColumn, bool _InputNextColumn)
+	public static int ComputeNewGridElementIndex(int _GridElementIndex, int _GridElementCount, int _GridColumnCount, bool _InputPreviousRow, bool _InputNextRow, bool _InputPreviousColumn, bool _InputNextColumn)
 	{
 		int elementIndex = _GridElementIndex;
 		int elementCount = _GridElementCount;
@@ -729,5 +450,191 @@ public class MenuManager : MonoBehaviour
 		System.Diagnostics.Debug.Assert( (0 <= newElementIndex) && (newElementIndex < elementCount) );
 		
 		return newElementIndex;
+	}
+}
+
+[System.Serializable]
+public class MenuAction
+{
+	[SerializeField]
+	private MenuActionType m_MenuActionType = MenuActionType.E_MenuActionNone;
+	public MenuActionType GetMenuActionType() { return m_MenuActionType; }
+	
+	[SerializeField]
+	private int m_MouseButtonIndexToPress = 0;
+	[SerializeField]
+	private MenuInputPressedEvent m_MouseButtonPressedEvent = MenuInputPressedEvent.E_MenuInputPressedOnDown;
+	[SerializeField]
+	private KeyCode m_KeyToPress = KeyCode.None;
+	[SerializeField]
+	private MenuInputPressedEvent m_KeyPressedEvent = MenuInputPressedEvent.E_MenuInputPressedOnDown;
+	[SerializeField]
+	private KeyCode m_AlternateKeyToPress = KeyCode.None;
+	[SerializeField]
+	private MenuInputPressedEvent m_AlternateKeyPressedEvent = MenuInputPressedEvent.E_MenuInputPressedOnDown;
+	[SerializeField]
+	private int m_JoystickButtonIndexToPress = 0;
+	[SerializeField]
+	private MenuInputPressedEvent m_JoystickButtonPressedEvent = MenuInputPressedEvent.E_MenuInputPressedOnDown;
+	
+	private KeyCode m_AnyJoystickButtonToPress = KeyCode.None;
+	private KeyCode[] m_JoystickButtonToPress = null;
+	
+	public void InitMenuInputs(InputManager _InputManager)
+	{
+		//@TODO: add checks for m_KeyToPress and m_AlternateKeyToPress being valid keyboard keys
+		
+		string anyJoystickButtonNameBase = _InputManager.GetAnyJoystickButtonNameBase();
+		
+		string joystickButtonIndexString = m_JoystickButtonIndexToPress.ToString();
+		
+		string anyJoystickValidateButtonName = anyJoystickButtonNameBase + joystickButtonIndexString;
+		KeyCode anyJoystickValidateButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), anyJoystickValidateButtonName);
+		m_AnyJoystickButtonToPress = anyJoystickValidateButton;
+		
+		int joystickCount = _InputManager.GetSupportedJoystickCount();
+		m_JoystickButtonToPress = new KeyCode[joystickCount];
+		
+		for (int joystickIndex = 0; joystickIndex < joystickCount; ++joystickIndex)
+		{
+			string joystickButtonNameBase = _InputManager.GetJoystickButtonNameBase(joystickIndex);
+			
+			string joystickValidateButtonName = joystickButtonNameBase + joystickButtonIndexString;
+			KeyCode joystickValidateButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), joystickValidateButtonName);
+			m_JoystickButtonToPress[joystickIndex] = joystickValidateButton;
+		}
+	}
+	
+	public bool IsInputPressed(InputManager _InputManager)
+	{
+		InputManager inputMgr = _InputManager;
+		
+		//bool supportMouse = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceMouse);
+		bool supportKeyboard = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceKeyboard)
+			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceMouseAndKeyboard);
+		
+		bool supportKeyboardAlt = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceKeyboardAlternate)
+			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceMouseAndKeyboardAlternate);
+		
+		bool supportJoystick = inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_1)
+			|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_2)
+				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_3)
+				|| inputMgr.IsInputDeviceValid(InputDevice.E_InputDeviceGamepad_4);
+		
+		//@HACK: not including mouse clicks which will be handled automatically when clicking on Unity3d GUI button
+		//@FIXME: need to find a proper solution for handling menu inputs in a common way for both mouse and other input devices
+		
+		//bool mouseClicked = supportMouse && IsInputPressedForMouse();
+		bool keyboardPressed = (supportKeyboard && IsInputPressedForKeyboard())
+			|| (supportKeyboardAlt && IsInputPressedForKeyboardAlternate());
+		bool joystickPressed = supportJoystick && IsInputPressedForAnyJoystick();
+		bool validateMenuPressed = /*mouseClicked ||*/ keyboardPressed || joystickPressed;
+		
+		return validateMenuPressed;
+	}
+	
+	public bool IsInputPressed(InputManager _InputManager, InputDevice _InputDevice)
+	{
+		InputManager inputMgr = _InputManager;
+		
+		bool inputPressed = false;
+		
+		bool validDevice = inputMgr.IsInputDeviceValid(_InputDevice);
+		if (validDevice)
+		{
+			switch (_InputDevice)
+			{
+			case InputDevice.E_InputDeviceMouse:
+				inputPressed = IsInputPressedForMouse();
+				break;
+			case InputDevice.E_InputDeviceKeyboard:
+				inputPressed = IsInputPressedForKeyboard();
+				break;
+			case InputDevice.E_InputDeviceKeyboardAlternate:
+				inputPressed = IsInputPressedForKeyboardAlternate();
+				break;
+			case InputDevice.E_InputDeviceMouseAndKeyboard:
+				inputPressed = IsInputPressedForMouse() || IsInputPressedForKeyboard();
+				break;
+			case InputDevice.E_InputDeviceMouseAndKeyboardAlternate:
+				inputPressed = IsInputPressedForMouse() || IsInputPressedForKeyboardAlternate();
+				break;
+			case InputDevice.E_InputDeviceGamepad_1:
+				inputPressed = IsInputPressedForJoystick(0);
+				break;
+			case InputDevice.E_InputDeviceGamepad_2:
+				inputPressed = IsInputPressedForJoystick(1);
+				break;
+			case InputDevice.E_InputDeviceGamepad_3:
+				inputPressed = IsInputPressedForJoystick(2);
+				break;
+			case InputDevice.E_InputDeviceGamepad_4:
+				inputPressed = IsInputPressedForJoystick(3);
+				break;
+			case InputDevice.E_InputDeviceTouch:
+				//@TODO
+				break;
+			}
+		}
+		
+		return inputPressed;
+	}
+	
+	private bool IsInputDownForMouse() { return Input.GetMouseButtonDown(m_MouseButtonIndexToPress); }
+	private bool IsInputUpForMouse() { return Input.GetMouseButtonUp(m_MouseButtonIndexToPress); }
+	private bool IsInputPressedForMouse()
+	{
+		bool pressedOnDown = (m_MouseButtonPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnDown);
+		bool pressedOnUp = (m_MouseButtonPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnUp);
+		bool mouseClicked = (pressedOnDown && IsInputDownForMouse()) || (pressedOnUp && IsInputUpForMouse());
+		return mouseClicked;
+	}
+	
+	private bool IsInputDownForKeyboard() { return Input.GetKeyDown(m_KeyToPress); }
+	private bool IsInputUpForKeyboard() { return Input.GetKeyUp(m_KeyToPress); }
+	private bool IsInputPressedForKeyboard()
+	{
+		bool pressedOnDown = (m_KeyPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnDown);
+		bool pressedOnUp = (m_KeyPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnUp);
+		bool keyboardPressed = (pressedOnDown && IsInputDownForKeyboard()) || (pressedOnUp && IsInputUpForKeyboard());
+		return keyboardPressed;
+	}
+	
+	private bool IsInputDownForKeyboardAlternate() { return Input.GetKeyDown(m_AlternateKeyToPress); }
+	private bool IsInputUpForKeyboardAlternate() { return Input.GetKeyUp(m_AlternateKeyToPress); }
+	private bool IsInputPressedForKeyboardAlternate()
+	{
+		bool pressedOnDown = (m_AlternateKeyPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnDown);
+		bool pressedOnUp = (m_AlternateKeyPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnUp);
+		bool keyboardPressed = (pressedOnDown && IsInputDownForKeyboardAlternate()) || (pressedOnUp && IsInputUpForKeyboardAlternate());
+		return keyboardPressed;
+	}
+	
+	private bool IsInputDownForAnyJoystick() { return Input.GetKeyDown(m_AnyJoystickButtonToPress); }
+	private bool IsInputUpForAnyJoystick() { return Input.GetKeyUp(m_AnyJoystickButtonToPress); }
+	private bool IsInputPressedForAnyJoystick()
+	{
+		bool pressedOnDown = (m_JoystickButtonPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnDown);
+		bool pressedOnUp = (m_JoystickButtonPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnUp);
+		bool joystickPressed = (pressedOnDown && IsInputDownForAnyJoystick()) || (pressedOnUp && IsInputUpForAnyJoystick());
+		return joystickPressed;
+	}
+	
+	private bool IsInputDownForJoystick(int _JoystickIndex)
+	{
+		KeyCode joystickKey = m_JoystickButtonToPress[_JoystickIndex];
+		return Input.GetKeyDown(joystickKey);
+	}
+	private bool IsInputUpForJoystick(int _JoystickIndex)
+	{
+		KeyCode joystickKey = m_JoystickButtonToPress[_JoystickIndex];
+		return Input.GetKeyUp(joystickKey);
+	}
+	private bool IsInputPressedForJoystick(int _JoystickIndex)
+	{
+		bool pressedOnDown = (m_JoystickButtonPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnDown);
+		bool pressedOnUp = (m_JoystickButtonPressedEvent == MenuInputPressedEvent.E_MenuInputPressedOnUp);
+		bool joystickPressed = (pressedOnDown && IsInputDownForJoystick(_JoystickIndex)) || (pressedOnUp && IsInputUpForJoystick(_JoystickIndex));
+		return joystickPressed;
 	}
 }
