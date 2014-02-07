@@ -52,10 +52,6 @@ public class InputManager : MonoBehaviour
 	{
 		bool inputConnected = false;
 
-		//@HACK: this doesn't support devices connected / disconnected at run-time
-		string[] connectedJoystickNames = Input.GetJoystickNames();
-		int connectedJoystickCount = connectedJoystickNames.Length;
-
 		//@FIXME: how to check if mouse / keyboard / touch are connected?
 		switch (_InputDevice)
 		{
@@ -75,16 +71,16 @@ public class InputManager : MonoBehaviour
 			inputConnected = true;
 			break;
 		case InputDevice.E_InputDeviceGamepad_1:
-			inputConnected = (connectedJoystickCount > 0);
+			inputConnected = IsJoystickConnected(0);
 			break;
 		case InputDevice.E_InputDeviceGamepad_2:
-			inputConnected = (connectedJoystickCount > 1);
+			inputConnected = IsJoystickConnected(1);
 			break;
 		case InputDevice.E_InputDeviceGamepad_3:
-			inputConnected = (connectedJoystickCount > 2);
+			inputConnected = IsJoystickConnected(2);
 			break;
 		case InputDevice.E_InputDeviceGamepad_4:
-			inputConnected = (connectedJoystickCount > 3);
+			inputConnected = IsJoystickConnected(3);
 			break;
 		case InputDevice.E_InputDeviceTouch:
 			inputConnected = true;
@@ -94,23 +90,28 @@ public class InputManager : MonoBehaviour
 		return inputConnected;
 	}
 
+	private bool IsJoystickConnected(int _JoystickIndex)
+	{
+		//@HACK: this doesn't support devices connected / disconnected at run-time
+		string[] connectedJoystickNames = Input.GetJoystickNames();
+		int connectedJoystickCount = connectedJoystickNames.Length;
+
+		bool connected = (0 <= _JoystickIndex && _JoystickIndex < connectedJoystickCount);
+		return connected;
+	}
+
 	public bool IsInputDeviceValid(InputDevice _InputDevice)
 	{
-		InputDevice[] supportedDevices = GetSupportedInputDevices();
+		InputDevice[] validDevices = GetValidInputDevices();
 
 		bool valid = false;
-
-		bool connected = IsInputConnected(_InputDevice);
-		if (connected)
+		foreach(InputDevice validDevice in validDevices)
 		{
-			foreach(InputDevice supportedDevice in supportedDevices)
+			bool included = IsInputIncludedIn(_InputDevice, validDevice);
+			if (included)
 			{
-				bool supported = IsInputIncludedIn(_InputDevice, supportedDevice);
-				if (supported)
-				{
-					valid = true;
-					break;
-				}
+				valid = true;
+				break;
 			}
 		}
 
@@ -268,10 +269,11 @@ public class InputManager : MonoBehaviour
 	private void UpdateValidInputList()
 	{
 		InputDevice[] supportedDevices = GetSupportedInputDevices();
+
 		int validDeviceCount = 0;
 		foreach(InputDevice supportedDevice in supportedDevices)
 		{
-			if (IsInputDeviceValid(supportedDevice))
+			if (IsInputConnected(supportedDevice))
 			{
 				++validDeviceCount;
 			}
@@ -283,7 +285,7 @@ public class InputManager : MonoBehaviour
 		int currentValidIndex = 0;
 		foreach(InputDevice supportedDevice in supportedDevices)
 		{
-			if (IsInputDeviceValid(supportedDevice))
+			if (IsInputConnected(supportedDevice))
 			{
 				m_ValidInputDevices[currentValidIndex] = supportedDevice;
 				Debug.Log(string.Format("Valid input device {0}: {1}", currentValidIndex, GetInputDeviceName(supportedDevice)));
