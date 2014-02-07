@@ -120,8 +120,8 @@ public class GameHunt : MonoBehaviour
 		}
 		else
 		{
-			InputDevice[] supportedDevices = inputManager.GetSupportedInputDevices();
-			if (supportedDevices.Length == 0)
+			InputDevice[] validDevices = inputManager.GetValidInputDevices();
+			if (validDevices.Length == 0)
 			{
 				Debug.Log("InputManager needs at least one supported device to work!");
 				inputManager = null;

@@ -9,6 +9,7 @@ public enum InputDevice
 	E_InputDeviceKeyboardAlternate,
 	E_InputDeviceMouseAndKeyboard,
 	E_InputDeviceMouseAndKeyboardAlternate,
+	//@NOTE: number of gamepads should match InputManager::m_SupportedJoystickCountMax
 	E_InputDeviceGamepad_1,
 	E_InputDeviceGamepad_2,
 	E_InputDeviceGamepad_3,
@@ -20,10 +21,17 @@ public class InputManager : MonoBehaviour
 {
 	[SerializeField]
 	private InputDevice[] m_SupportedInputDevices;
+	public InputDevice[] GetSupportedInputDevices() { return m_SupportedInputDevices; }
+
+	private InputDevice[] m_ValidInputDevices = null;
+	public InputDevice[] GetValidInputDevices() { return m_ValidInputDevices; }
+
+	private const int m_SupportedJoystickCountMax = 4;
+	public int GetSupportedJoystickCountMax() { return m_SupportedJoystickCountMax; }
 
 	public string GetJoystickButtonNameBase(int _JoystickIndex)
 	{
-		System.Diagnostics.Debug.Assert( (0 <= _JoystickIndex) && (_JoystickIndex < GetSupportedJoystickCount()) );
+		System.Diagnostics.Debug.Assert( (0 <= _JoystickIndex) && (_JoystickIndex < GetSupportedJoystickCountMax()) );
 
 		//@NOTE: IMPORTANT - Unity3d joystick indices starts at 1
 		int joystickNameStartIndex = 1;
@@ -40,26 +48,74 @@ public class InputManager : MonoBehaviour
 		return joystickButtonNameBase;
 	}
 
-	private const int m_SupportedJoystickCount = 4;
-	public int GetSupportedJoystickCount() { return m_SupportedJoystickCount; }
-	
+	public bool IsInputConnected(InputDevice _InputDevice)
+	{
+		bool inputConnected = false;
+
+		//@HACK: this doesn't support devices connected / disconnected at run-time
+		string[] connectedJoystickNames = Input.GetJoystickNames();
+		int connectedJoystickCount = connectedJoystickNames.Length;
+
+		//@FIXME: how to check if mouse / keyboard / touch are connected?
+		switch (_InputDevice)
+		{
+		case InputDevice.E_InputDeviceMouse:
+			inputConnected = true;
+			break;
+		case InputDevice.E_InputDeviceKeyboard:
+			inputConnected = true;
+			break;
+		case InputDevice.E_InputDeviceKeyboardAlternate:
+			inputConnected = true;
+			break;
+		case InputDevice.E_InputDeviceMouseAndKeyboard:
+			inputConnected = true;
+			break;
+		case InputDevice.E_InputDeviceMouseAndKeyboardAlternate:
+			inputConnected = true;
+			break;
+		case InputDevice.E_InputDeviceGamepad_1:
+			inputConnected = (connectedJoystickCount > 0);
+			break;
+		case InputDevice.E_InputDeviceGamepad_2:
+			inputConnected = (connectedJoystickCount > 1);
+			break;
+		case InputDevice.E_InputDeviceGamepad_3:
+			inputConnected = (connectedJoystickCount > 2);
+			break;
+		case InputDevice.E_InputDeviceGamepad_4:
+			inputConnected = (connectedJoystickCount > 3);
+			break;
+		case InputDevice.E_InputDeviceTouch:
+			inputConnected = true;
+			break;
+		}
+
+		return inputConnected;
+	}
+
 	public bool IsInputDeviceValid(InputDevice _InputDevice)
 	{
-		bool inputDeviceSupported = false;
-		foreach(InputDevice supportedInputDevice in m_SupportedInputDevices)
+		InputDevice[] supportedDevices = GetSupportedInputDevices();
+
+		bool valid = false;
+
+		bool connected = IsInputConnected(_InputDevice);
+		if (connected)
 		{
-			bool supported = IsInputIncludedIn(_InputDevice, supportedInputDevice);
-			if (supported)
+			foreach(InputDevice supportedDevice in supportedDevices)
 			{
-				inputDeviceSupported = true;
-				break;
+				bool supported = IsInputIncludedIn(_InputDevice, supportedDevice);
+				if (supported)
+				{
+					valid = true;
+					break;
+				}
 			}
 		}
 
-		return inputDeviceSupported;
+		return valid;
 	}
-	
-	public InputDevice[] GetSupportedInputDevices() { return m_SupportedInputDevices; }
 
 	public bool IsInputJoystick(InputDevice _InputDevice)
 	{
@@ -135,7 +191,7 @@ public class InputManager : MonoBehaviour
 			break;
 		case InputDevice.E_InputDeviceGamepad_4:
 			areConflicting = (_InputDevice2 == InputDevice.E_InputDeviceGamepad_4);
-			break;	
+			break;
 		case InputDevice.E_InputDeviceTouch:
 			//@FIXME: this might not be always true since Touch devices could possibly support multiple users
 			//also a local device might have multiple touch devices
@@ -182,7 +238,7 @@ public class InputManager : MonoBehaviour
 			break;
 		case InputDevice.E_InputDeviceGamepad_4:
 			isIncluding = (_InputDevice == InputDevice.E_InputDeviceGamepad_4);
-			break;	
+			break;
 		case InputDevice.E_InputDeviceTouch:
 			isIncluding = (_InputDevice == InputDevice.E_InputDeviceTouch);
 			break;
@@ -193,11 +249,48 @@ public class InputManager : MonoBehaviour
 	
 	void Start()
 	{
+		string[] connectedJoystickNames = Input.GetJoystickNames();
+		int joystickCount = connectedJoystickNames.Length;
+		for (int joystickIndex = 0; joystickIndex < joystickCount; ++joystickIndex)
+		{
+			string joystickName = connectedJoystickNames[joystickIndex];
+			Debug.Log(string.Format("Joystick {0}: {1}", joystickIndex, joystickName));
+		}
+
+		UpdateValidInputList();
 	}
 	
 	void Update()
 	{
 	
+	}
+
+	private void UpdateValidInputList()
+	{
+		InputDevice[] supportedDevices = GetSupportedInputDevices();
+		int validDeviceCount = 0;
+		foreach(InputDevice supportedDevice in supportedDevices)
+		{
+			if (IsInputDeviceValid(supportedDevice))
+			{
+				++validDeviceCount;
+			}
+		}
+
+		Debug.Log("Updating valid input device list");
+
+		m_ValidInputDevices = new InputDevice[validDeviceCount];
+		int currentValidIndex = 0;
+		foreach(InputDevice supportedDevice in supportedDevices)
+		{
+			if (IsInputDeviceValid(supportedDevice))
+			{
+				m_ValidInputDevices[currentValidIndex] = supportedDevice;
+				Debug.Log(string.Format("Valid input device {0}: {1}", currentValidIndex, GetInputDeviceName(supportedDevice)));
+
+				++currentValidIndex;
+			}
+		}
 	}
 	
 	public string GetInputDeviceName(InputDevice _InputDevice)
@@ -231,7 +324,7 @@ public class InputManager : MonoBehaviour
 			break;
 		case InputDevice.E_InputDeviceGamepad_4:
 			inputDeviceName = "Joystick 4";
-			break;	
+			break;
 		case InputDevice.E_InputDeviceTouch:
 			inputDeviceName = "Touch";
 			//@TODO
@@ -274,7 +367,7 @@ public class InputManager : MonoBehaviour
 			case InputDevice.E_InputDeviceGamepad_3:
 			case InputDevice.E_InputDeviceGamepad_4:
 				inputAxis = Input.GetAxis(inputAxisName);
-				break;	
+				break;
 			case InputDevice.E_InputDeviceTouch:
 				//@TODO: handle gesture or don't support menu input down??
 				break;

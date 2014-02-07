@@ -255,16 +255,16 @@ public class SelectMenu : MonoBehaviour
 #if DEBUG_ADD_LOCAL_PLAYERS_FOR_TEST
 		if (addLocalPlayers)
 		{
-			InputDevice[] supportedDevices = m_InputManager.GetSupportedInputDevices();
-			if (supportedDevices.Length >= 2)
+			InputDevice[] validDevices = m_InputManager.GetValidInputDevices();
+			if (validDevices.Length >= 2)
 			{
-				InputDevice inputPlayer1 = supportedDevices[0];
-				SetLocalPlayerInputDevice(0, inputPlayer1);
+				InputDevice devicePlayer1 = validDevices[0];
+				SetLocalPlayerInputDevice(0, devicePlayer1);
 
-				InputDevice inputPlayer2 = GetNextAvailableInputDevice(supportedDevices, inputPlayer1);
+				InputDevice devicePlayer2 = GetNextAvailableInputDevice(validDevices, devicePlayer1);
 				
-				players[0].SetPlayerInput(inputPlayer1);
-				players[1].SetPlayerInput(inputPlayer2);
+				players[0].SetPlayerInput(devicePlayer1);
+				players[1].SetPlayerInput(devicePlayer2);
 			}
 		}
 #endif
@@ -502,13 +502,13 @@ public class SelectMenu : MonoBehaviour
 			string playerSelectInputButton = GetPlayerSelectInputButtonName(playerIndex);
 			if (curFocusControlName.Equals(playerSelectInputButton))
 			{
-				InputDevice[] supportedInputDevices = m_InputManager.GetSupportedInputDevices();
+				InputDevice[] validDevices = m_InputManager.GetValidInputDevices();
 				InputDevice playerDevice = GetLocalPlayerInputDevice(playerIndex);
 				
-				InputDevice availableInput = GetNextAvailableInputDevice(supportedInputDevices, playerDevice);
-				if (m_InputManager.IsInputDeviceValid(availableInput))
+				InputDevice availableDevice = GetNextAvailableInputDevice(validDevices, playerDevice);
+				if (m_InputManager.IsInputDeviceValid(availableDevice))
 				{
-					SetLocalPlayerInputDevice(playerIndex, availableInput);
+					SetLocalPlayerInputDevice(playerIndex, availableDevice);
 				}
 			}
 		}

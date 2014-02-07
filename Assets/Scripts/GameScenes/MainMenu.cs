@@ -381,11 +381,11 @@ public class MainMenu : MonoBehaviour
 			SetLocalPlayerInputDevice(0, playerInputDevice);
 			m_PlayerManager.AddLocalPlayerToJoin(playerInputDevice);
 			
-			InputDevice[] supportedInputDevices = m_InputManager.GetSupportedInputDevices();
+			InputDevice[] validDevices = m_InputManager.GetValidInputDevices();
 			for (int playerIndex = 1; playerIndex < playerCount; ++playerIndex)
 			{
-				InputDevice availableInput = GetAvailableInputDevice(supportedInputDevices);
-				m_PlayerManager.AddLocalPlayerToJoin(availableInput);
+				InputDevice availableDevice = GetAvailableInputDevice(validDevices);
+				m_PlayerManager.AddLocalPlayerToJoin(availableDevice);
 			}
 			
 			RequestLevelTransition(m_SelectSceneIndex);

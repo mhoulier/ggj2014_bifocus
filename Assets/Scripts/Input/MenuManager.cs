@@ -169,16 +169,16 @@ public class MenuManager : MonoBehaviour
 		
 		float inputVertical = 0.0f;
 
-		InputDevice[] supportedDevices = inputMgr.GetSupportedInputDevices();
-		foreach(InputDevice supportedDevice in supportedDevices)
+		InputDevice[] validDevices = inputMgr.GetValidInputDevices();
+		foreach(InputDevice validDevice in validDevices)
 		{
-			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(supportedDevice);
-			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(supportedDevice) : supportedDevice;
+			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(validDevice);
+			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(validDevice) : validDevice;
 			
 			float inputAxis = inputMgr.GetInputForAxis(menuInputDevice, horizontalAxis);
 			if (inputAxis != 0.0f)
 			{
-				bool isJoystick = inputMgr.IsInputJoystick(supportedDevice);
+				bool isJoystick = inputMgr.IsInputJoystick(validDevice);
 				inputVertical = (isJoystick && invertJoystickAxis)? -inputAxis : inputAxis;
 				break;
 			}
@@ -212,16 +212,16 @@ public class MenuManager : MonoBehaviour
 		
 		float inputVertical = 0.0f;
 		
-		InputDevice[] supportedDevices = inputMgr.GetSupportedInputDevices();
-		foreach(InputDevice supportedDevice in supportedDevices)
+		InputDevice[] validDevices = inputMgr.GetValidInputDevices();
+		foreach(InputDevice validDevice in validDevices)
 		{
-			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(supportedDevice);
-			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(supportedDevice) : supportedDevice;
+			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(validDevice);
+			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(validDevice) : validDevice;
 			
 			float inputAxis = inputMgr.GetInputForAxis(menuInputDevice, horizontalAxis);
 			if (inputAxis != 0.0f)
 			{
-				bool isJoystick = inputMgr.IsInputJoystick(supportedDevice);
+				bool isJoystick = inputMgr.IsInputJoystick(validDevice);
 				inputVertical = (isJoystick && invertJoystickAxis)? -inputAxis : inputAxis;
 				break;
 			}
@@ -255,11 +255,11 @@ public class MenuManager : MonoBehaviour
 		
 		float inputHorizontal = 0.0f;
 		
-		InputDevice[] supportedDevices = inputMgr.GetSupportedInputDevices();
-		foreach(InputDevice supportedDevice in supportedDevices)
+		InputDevice[] validDevices = inputMgr.GetValidInputDevices();
+		foreach(InputDevice validDevice in validDevices)
 		{
-			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(supportedDevice);
-			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(supportedDevice) : supportedDevice;
+			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(validDevice);
+			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(validDevice) : validDevice;
 			
 			float inputAxis = inputMgr.GetInputForAxis(menuInputDevice, horizontalAxis);
 			if (inputAxis != 0.0f)
@@ -295,11 +295,11 @@ public class MenuManager : MonoBehaviour
 		
 		float inputHorizontal = 0.0f;
 		
-		InputDevice[] supportedDevices = inputMgr.GetSupportedInputDevices();
-		foreach(InputDevice supportedDevice in supportedDevices)
+		InputDevice[] validDevices = inputMgr.GetValidInputDevices();
+		foreach(InputDevice validDevice in validDevices)
 		{
-			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(supportedDevice);
-			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(supportedDevice) : supportedDevice;
+			bool isMouseAndKeyboard = inputMgr.IsInputMouseAndKeyboard(validDevice);
+			InputDevice menuInputDevice = (isMouseAndKeyboard)? inputMgr.GetIncludedKeyboardInput(validDevice) : validDevice;
 
 			float inputAxis = inputMgr.GetInputForAxis(menuInputDevice, horizontalAxis);
 			if (inputAxis != 0.0f)
@@ -333,13 +333,13 @@ public class MenuManager : MonoBehaviour
 
 		InputDevice playerInputDevice = InputDevice.E_InputDeviceNone;
 
-		InputDevice[] supportedDevices = inputMgr.GetSupportedInputDevices();
-		foreach(InputDevice supportedDevice in supportedDevices)
+		InputDevice[] validDevices = inputMgr.GetValidInputDevices();
+		foreach(InputDevice validDevice in validDevices)
 		{
-			bool validateMenuPressed = IsMenuActionInputPressed(MenuActionType.E_MenuValidate, supportedDevice);
+			bool validateMenuPressed = IsMenuActionInputPressed(MenuActionType.E_MenuValidate, validDevice);
 			if (validateMenuPressed)
 			{
-				playerInputDevice = supportedDevice;
+				playerInputDevice = validDevice;
 				Debug.Log(string.Format("Player Input Device is '{0}'", inputMgr.GetInputDeviceName(playerInputDevice)));
 				
 				break;
@@ -492,7 +492,7 @@ public class MenuAction
 		KeyCode anyJoystickValidateButton = (KeyCode)System.Enum.Parse(typeof(KeyCode), anyJoystickValidateButtonName);
 		m_AnyJoystickButtonToPress = anyJoystickValidateButton;
 		
-		int joystickCount = _InputManager.GetSupportedJoystickCount();
+		int joystickCount = _InputManager.GetSupportedJoystickCountMax();
 		m_JoystickButtonToPress = new KeyCode[joystickCount];
 		
 		for (int joystickIndex = 0; joystickIndex < joystickCount; ++joystickIndex)
