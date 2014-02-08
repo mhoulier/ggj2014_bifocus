@@ -5,7 +5,6 @@ public enum NetworkMode { E_NetworkNone, E_NetworkLanOnly, E_NetworkOnlineOnly, 
 
 public class NetworkManager : MonoBehaviour
 {
-	[SerializeField]
 	private NetworkMode m_NetworkMode = NetworkMode.E_NetworkNone;
 
 	public int m_ConnectionCountMax = 4;
