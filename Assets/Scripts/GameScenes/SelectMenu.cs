@@ -240,8 +240,8 @@ public class SelectMenu : MonoBehaviour
 		bool addLocalPlayers = (players.Count == 0);
 		if (addLocalPlayers)
 		{
-			m_PlayerManager.AddLocalPlayerToJoin(InputDevice.E_InputDeviceNone);
-			m_PlayerManager.AddLocalPlayerToJoin(InputDevice.E_InputDeviceNone);
+			m_PlayerManager.DebugLocalPlayerJoin(InputDevice.E_InputDeviceNone);
+			m_PlayerManager.DebugLocalPlayerJoin(InputDevice.E_InputDeviceNone);
 
 			players = m_PlayerManager.GetPlayers();
 			playerCount = players.Count;

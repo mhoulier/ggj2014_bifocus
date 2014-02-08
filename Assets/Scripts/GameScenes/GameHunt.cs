@@ -51,6 +51,9 @@ public class GameHunt : MonoBehaviour
 	private bool IsSequenceActive() { return m_IsActiveSequence; }
 
 	[SerializeField]
+	private int m_GamePlayerCount = 2;
+
+	[SerializeField]
 	private int m_NextLevelIndex = -1;
 
 #if DEBUG_ADD_LOCAL_PLAYERS_FOR_TEST
@@ -79,12 +82,11 @@ public class GameHunt : MonoBehaviour
 				PlayerSpawner highUpSpawner = PlayerSpawner.FindPlayerSpawner(PlayerClass.E_ClassHighUp);
 				if (onGroundSpawner != null && highUpSpawner != null)
 				{
-					m_PlayerManager.AddLocalPlayerToJoin(m_DebugOnGroundPlayerInput);
-					m_PlayerManager.AddLocalPlayerToJoin(m_DebugHighUpPlayerInput);
-					
-					players = m_PlayerManager.GetPlayers();
-					players[0].SetPlayerClass(PlayerClass.E_ClassOnGround);
-					players[1].SetPlayerClass(PlayerClass.E_ClassHighUp);
+					Player player1 = m_PlayerManager.DebugLocalPlayerJoin(m_DebugOnGroundPlayerInput);
+					Player player2 = m_PlayerManager.DebugLocalPlayerJoin(m_DebugHighUpPlayerInput);
+
+					player1.SetPlayerClass(PlayerClass.E_ClassOnGround);
+					player2.SetPlayerClass(PlayerClass.E_ClassHighUp);
 				}
 			}
 #endif
@@ -222,7 +224,11 @@ public class GameHunt : MonoBehaviour
 
 	private void UpdateGameWaitingForPlayers(float _DeltaTime)
 	{
-		PrepareForStart();
+		List<Player> players = m_PlayerManager.GetPlayers();
+		if (players.Count == m_GamePlayerCount)
+		{
+			PrepareForStart();
+		}
 	}
 
 	private void PrepareForStart()

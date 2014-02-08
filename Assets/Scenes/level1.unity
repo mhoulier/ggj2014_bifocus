@@ -7734,6 +7734,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_GameManagerPrefab: {fileID: 100000, guid: 7d441f4aea6f0c24d8056aca54aa8321, type: 2}
+  m_GamePlayerCount: 2
   m_NextLevelIndex: 4
   m_DebugOnGroundPlayerInput: 4
   m_DebugHighUpPlayerInput: 3

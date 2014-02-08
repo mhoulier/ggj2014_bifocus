@@ -30,6 +30,7 @@ public class MainMenu : MonoBehaviour
 	private InputManager m_InputManager = null;
 	private MenuManager m_MenuManager = null;
 	private PlayerManager m_PlayerManager = null;
+	private NetworkManager m_NetworkManager = null;
 	
 	private bool m_IsActiveSequence = false;
 	private bool IsSequenceActive() { return m_IsActiveSequence; }
@@ -177,11 +178,18 @@ public class MainMenu : MonoBehaviour
 		{
 			Debug.Log("GameManager prefab is missing a PlayerManager component!");
 		}
+
+		NetworkManager networkManager = (NetworkManager)FindObjectOfType( typeof(NetworkManager) );
+		if (networkManager == null)
+		{
+			Debug.Log("GameManager prefab has no NetworkManager component: Only local games supported!");
+		}
 		
 		m_LevelManager = levelManager;
 		m_InputManager = inputManager;
 		m_MenuManager = menuManager;
 		m_PlayerManager = playerManager;
+		m_NetworkManager = networkManager;
 		
 		m_IsActiveSequence = (m_LevelManager != null) && (m_InputManager != null) && (m_MenuManager != null) && (m_PlayerManager != null);
 
@@ -197,7 +205,7 @@ public class MainMenu : MonoBehaviour
 
 	private void InitPlayers()
 	{
-		m_PlayerManager.RemoveAllPlayers();
+		m_PlayerManager.RequestRemoveAllPlayers();
 	}
 
 	private void InitMenu()
@@ -313,6 +321,8 @@ public class MainMenu : MonoBehaviour
 		bool nextLevelIsValid = m_LevelManager.IsValidLevelIndex(m_NextLevelIndex);
 		if ( nextLevelIsValid )
 		{
+			//@TODO: Wait for pending local players
+
 			EndSequence();
 		}
 	}
@@ -378,14 +388,20 @@ public class MainMenu : MonoBehaviour
 
 		if (validInputDevice && playerCount > 0)
 		{
+			//Play a local game
+			if (m_NetworkManager != null)
+			{
+				m_NetworkManager.SetNetworkMode(NetworkMode.E_NetworkNone);
+			}
+
 			SetLocalPlayerInputDevice(0, playerInputDevice);
-			m_PlayerManager.AddLocalPlayerToJoin(playerInputDevice);
+			m_PlayerManager.RequestLocalPlayerJoin(playerInputDevice);
 			
 			InputDevice[] validDevices = m_InputManager.GetValidInputDevices();
 			for (int playerIndex = 1; playerIndex < playerCount; ++playerIndex)
 			{
 				InputDevice availableDevice = GetAvailableInputDevice(validDevices);
-				m_PlayerManager.AddLocalPlayerToJoin(availableDevice);
+				m_PlayerManager.RequestLocalPlayerJoin(availableDevice);
 			}
 			
 			RequestLevelTransition(m_SelectSceneIndex);
