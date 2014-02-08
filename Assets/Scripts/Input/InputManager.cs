@@ -247,8 +247,8 @@ public class InputManager : MonoBehaviour
 		
 		return isIncluding;
 	}
-	
-	void Start()
+
+	void Awake()
 	{
 		string[] connectedJoystickNames = Input.GetJoystickNames();
 		int joystickCount = connectedJoystickNames.Length;
@@ -257,8 +257,13 @@ public class InputManager : MonoBehaviour
 			string joystickName = connectedJoystickNames[joystickIndex];
 			Debug.Log(string.Format("Joystick {0}: {1}", joystickIndex, joystickName));
 		}
-
+		
 		UpdateValidInputList();
+	}
+	
+	void Start()
+	{
+
 	}
 	
 	void Update()
