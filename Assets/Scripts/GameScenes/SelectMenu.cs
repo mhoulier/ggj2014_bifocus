@@ -503,13 +503,12 @@ public class SelectMenu : MonoBehaviour
 			if (curFocusControlName.Equals(playerSelectInputButton))
 			{
 				InputDevice[] validDevices = m_InputManager.GetValidInputDevices();
-				InputDevice playerDevice = GetLocalPlayerInputDevice(playerIndex);
+				InputDevice oldPlayerDevice = GetLocalPlayerInputDevice(playerIndex);
+				SetLocalPlayerInputDevice(playerIndex, InputDevice.E_InputDeviceNone);
 				
-				InputDevice availableDevice = GetNextAvailableInputDevice(validDevices, playerDevice);
-				if (m_InputManager.IsInputDeviceValid(availableDevice))
-				{
-					SetLocalPlayerInputDevice(playerIndex, availableDevice);
-				}
+				InputDevice availableDevice = GetNextAvailableInputDevice(validDevices, oldPlayerDevice);
+				InputDevice newPlayerDevice = (availableDevice != InputDevice.E_InputDeviceNone)? availableDevice : oldPlayerDevice;
+				SetLocalPlayerInputDevice(playerIndex, newPlayerDevice);
 			}
 		}
 	}		
