@@ -1,6 +1,20 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+public enum MenuEvent
+{
+	E_MenuEventNone,
+	E_MenuPlayLocalPressed,
+	E_MenuPlayNetworkPressed,
+	E_MenuIntroPressed,
+	E_MenuAboutPressed,
+	E_MenuQuitPressed,
+	E_MenuStartPressed,
+	E_MenuBackPressed,
+	E_MenuSelectInputPressed,
+	E_MenuSelectClassPressed,
+};
+
 public enum MenuActionType
 {
 	E_MenuActionNone,
@@ -637,4 +651,58 @@ public class MenuAction
 		bool joystickPressed = (pressedOnDown && IsInputDownForJoystick(_JoystickIndex)) || (pressedOnUp && IsInputUpForJoystick(_JoystickIndex));
 		return joystickPressed;
 	}
+}
+
+public delegate void MenuEventDelegate(MenuEvent _MenuEvent);
+
+[System.Serializable]
+public class MenuButton
+{
+	[SerializeField]
+	private string m_ControlName = null;
+	[SerializeField]
+	private string m_LabelName = null;
+	[SerializeField]
+	private MenuEvent m_MenuEventToTrigger = MenuEvent.E_MenuEventNone;
+	
+	private MenuEventDelegate m_TriggerDelegate = null;
+	
+	public MenuButton(string _ControlName, string _LabelName, MenuEvent _MenuEventToTrigger, MenuEventDelegate _TriggerDelegate)
+	{
+		m_ControlName = _ControlName;
+		m_LabelName = _LabelName;
+		m_MenuEventToTrigger = _MenuEventToTrigger;
+		m_TriggerDelegate = _TriggerDelegate;
+	}
+	
+	public string GetControlName() { return m_ControlName; }
+	public string GetLabelName() { return m_LabelName; }
+	public MenuEvent GetMenuEventToTrigger() { return m_MenuEventToTrigger; }
+	
+	public void InitTriggerDelegate(MenuEventDelegate _TriggerDelegate) { m_TriggerDelegate = _TriggerDelegate; }
+	public void TriggerDelegate() { m_TriggerDelegate(m_MenuEventToTrigger); }
+}
+
+[System.Serializable]
+public class MenuPanel
+{
+	[SerializeField]
+	public int m_PanelWidth = 0;
+	[SerializeField]
+	public int m_PanelHeight = 0;
+	[SerializeField]
+	public int m_PanelButtonWidth = 0;
+	[SerializeField]
+	public int m_PanelButtonHeight = 0;
+	[SerializeField]
+	public int m_PanelButtonInterspaceY = 0;
+	[SerializeField]
+	public string m_PanelTitle = "";
+	[SerializeField]
+	public int m_PanelTitleTextHeight = 0;
+	
+	[SerializeField]
+	private MenuButton[] m_MenuButtons = null;
+	
+	public MenuButton[] GetMenuButtons() { return m_MenuButtons; }
 }

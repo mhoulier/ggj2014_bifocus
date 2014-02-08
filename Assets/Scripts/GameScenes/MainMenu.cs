@@ -2,25 +2,7 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-using System.Linq;
-
-//public enum MenuState { E_MenuNone, E_MenuMainPanel, E_MenuJoinPanel, E_MenuStartingGame, E_MenuConnectingGame, E_MenuTransitioningToLevel, E_MenuQuitingGame,};
-
-public delegate void ButtonTriggerDelegate();
-
-public class MenuButton
-{
-	public string m_ControlName = null;
-	public string m_LabelName = null;
-	public ButtonTriggerDelegate m_TriggerDelegate = null;
-	
-	public MenuButton(string _ControlName, string _LabelName, ButtonTriggerDelegate _TriggerDelegate)
-	{
-		m_ControlName = _ControlName;
-		m_LabelName = _LabelName;
-		m_TriggerDelegate = _TriggerDelegate;
-	}
-}
+//using System.Linq;
 
 public class MainMenu : MonoBehaviour
 {
@@ -31,6 +13,8 @@ public class MainMenu : MonoBehaviour
 	private MenuManager m_MenuManager = null;
 	private PlayerManager m_PlayerManager = null;
 	private NetworkManager m_NetworkManager = null;
+
+	private bool IsNetworkGameSupported() { return (m_NetworkManager != null); }
 	
 	private bool m_IsActiveSequence = false;
 	private bool IsSequenceActive() { return m_IsActiveSequence; }
@@ -40,7 +24,7 @@ public class MainMenu : MonoBehaviour
 	[SerializeField]
 	private int m_SelectSceneIndex = 0;
 	[SerializeField]
-	private int m_CreditSceneIndex = 0;
+	private int m_IntroSceneIndex = 0;
 
 	[SerializeField]
 	private Texture2D m_BackgroundImage = null;
@@ -50,26 +34,20 @@ public class MainMenu : MonoBehaviour
 	private int m_CenterOffsetX = 0;
 	[SerializeField]
 	private int m_CenterOffsetY = 0;
+
 	[SerializeField]
-	private int m_PanelWidth = 0;
+	private MenuPanel[] m_MenuPanels = null;
+
 	[SerializeField]
-	private int m_PanelHeight = 0;
-	[SerializeField]
-	private int m_PanelButtonWidth = 0;
-	[SerializeField]
-	private int m_PanelButtonHeight = 0;
-	[SerializeField]
-	private string m_PanelTitle = "";
-	
-	//private MenuState m_MenuState = MenuState.E_MenuNone;
-	//private void ChangeMenuState(MenuState _NewMenuState) { m_MenuState = _NewMenuState; }
+	private int m_MainPanelIndex = 0;
+
+	private List<MenuPanel> m_ActiveMenuPanels = null;
 	
 	private bool m_enableUI = false;
 	private bool IsUIEnable() { return m_enableUI; }
 	private void EnableUI() { m_enableUI = true; }
 	private void DisableUI(){ m_enableUI = false; }
-	
-	private int m_CurrentPanelIndex = 0;	//TODO: move current panel index to menu panel container
+
 	private int m_FocusOnButtonIndex = -1;
 	
 	private float m_MenuInputVerticalAxisWaitTime = 0.0f;
@@ -77,8 +55,8 @@ public class MainMenu : MonoBehaviour
 	//private bool m_InputVerticalUp = false;
 
 	[SerializeField]
-	private int m_PlayerCount = 2;
-	private int GetLocalPlayerCount(){ return m_PlayerCount; }
+	private int m_LocalPlayerCount = 2;
+	private int GetLocalPlayerCount(){ return m_LocalPlayerCount; }
 
 	private InputDevice[] m_PlayersInputDevice = null;
 
@@ -126,8 +104,6 @@ public class MainMenu : MonoBehaviour
 		return availableInput;
 	}
 	
-	private MenuButton[] m_MenuButtons = null;
-	
 	void OnLevelWasLoaded(int _level)
 	{
 		//InitGameSequence();
@@ -145,8 +121,6 @@ public class MainMenu : MonoBehaviour
 			InitMenu();
 			
 			EnableUI();
-			
-			//ChangeMenuState(MenuState.E_MenuMainPanel);
 		}
 	}
 	
@@ -208,8 +182,49 @@ public class MainMenu : MonoBehaviour
 		m_PlayerManager.RequestRemoveAllPlayers();
 	}
 
+	private MenuEventDelegate ResolveMenuEventDelegate(MenuEvent _MenuEvent)
+	{
+		MenuEventDelegate menuEventDelegate = null;
+		switch (_MenuEvent)
+		{
+		case MenuEvent.E_MenuPlayLocalPressed:
+			menuEventDelegate = PlayLocalGameButtonPressed;
+			break;
+		case MenuEvent.E_MenuIntroPressed:
+			menuEventDelegate = PlayIntroButtonPressed;
+			break;
+		case MenuEvent.E_MenuQuitPressed:
+			menuEventDelegate = QuitGameButtonPressed;
+			break;
+		default:
+			Debug.Log(string.Format("MainMenu doesn't support menu event '{0}'",  _MenuEvent.ToString()));
+			break;
+		}
+
+		return menuEventDelegate;
+	}
+
 	private void InitMenu()
 	{
+		int menuPanelCount = m_MenuPanels.Length;
+		if (menuPanelCount > m_MainPanelIndex)
+		{
+			MenuPanel mainPanel = m_MenuPanels[m_MainPanelIndex];
+
+			foreach (MenuPanel panel in m_MenuPanels)
+			{
+				MenuButton[] buttons = panel.GetMenuButtons();
+				foreach (MenuButton button in buttons)
+				{
+					MenuEventDelegate buttonDelegate = ResolveMenuEventDelegate(button.GetMenuEventToTrigger());
+					button.InitTriggerDelegate(buttonDelegate);
+				}
+			}
+
+			m_ActiveMenuPanels = new List<MenuPanel>(menuPanelCount);
+			m_ActiveMenuPanels.Add(mainPanel);
+		}
+
 		int playerCount = GetLocalPlayerCount();
 		m_PlayersInputDevice = new InputDevice[playerCount];
 
@@ -217,17 +232,6 @@ public class MainMenu : MonoBehaviour
 		{
 			SetLocalPlayerInputDevice(playerIndex, InputDevice.E_InputDeviceNone);
 		}
-
-		//@HACK: this should be data driven, specified from Unity editor
-		int mainMenuButtonCount = 3;
-
-		int menuButtonCount = mainMenuButtonCount;
-		MenuButton[] menu = new MenuButton[menuButtonCount];
-		menu[0] = new MenuButton("PlayButton", "Play Game", PlayButtonPressed);
-		menu[1] = new MenuButton("AboutButton", "Intro", AboutGameButtonPressed);
-		menu[2] = new MenuButton("QuitButton", "Exit", QuitGameButtonPressed);
-		
-		m_MenuButtons = menu;
 	}
 	
 	private void EndSequence()
@@ -259,7 +263,12 @@ public class MainMenu : MonoBehaviour
 		InputManager inputMgr = m_InputManager;
 		MenuManager menuMgr = m_MenuManager;
 
-		int buttonCount = m_MenuButtons.Length;
+		int activePanelCount = m_ActiveMenuPanels.Count;
+		System.Diagnostics.Debug.Assert(activePanelCount > 0);
+		MenuPanel mainPanel = m_ActiveMenuPanels[activePanelCount-1];
+		
+		MenuButton[] buttons = mainPanel.GetMenuButtons();
+		int buttonCount = buttons.Length;
 		
 		bool mouseMoved = inputMgr.IsMouseMoved();
 		
@@ -289,7 +298,7 @@ public class MainMenu : MonoBehaviour
 		
 		bool disableFocus = mouseMoved || (buttonCount == 0);
 		bool updateFocus = inputDown || inputUp;
-		bool pressFocusButton = IsMenuFocusValid() && validateMenuPressed;
+		bool pressFocusButton = IsMenuFocusValid(buttons) && validateMenuPressed;
 		
 		if (disableFocus)
 		{
@@ -301,18 +310,15 @@ public class MainMenu : MonoBehaviour
 		}
 		else if (pressFocusButton)
 		{
-			MenuButton focusButton = m_MenuButtons[m_FocusOnButtonIndex];
-			focusButton.m_TriggerDelegate();
+			MenuButton focusButton = buttons[m_FocusOnButtonIndex];
+			focusButton.TriggerDelegate();
 		}
 	}
 	
 	private void UpdateMenuPanels(float _DeltaTime)
 	{
-		m_CurrentPanelIndex = 0;
-		
 		if (IsUIEnable())
 		{
-			m_CurrentPanelIndex = 1;
 		}
 	}
 
@@ -332,9 +338,9 @@ public class MainMenu : MonoBehaviour
 		m_FocusOnButtonIndex = -1;
 	}
 	
-	private bool IsMenuFocusValid()
+	private bool IsMenuFocusValid(MenuButton[] _MenuButtons)
 	{
-		int buttonCount = m_MenuButtons.Length;
+		int buttonCount = _MenuButtons.Length;
 		bool validButtonIndex = (0 <= m_FocusOnButtonIndex) && (m_FocusOnButtonIndex < buttonCount);
 		
 		return validButtonIndex;
@@ -342,12 +348,18 @@ public class MainMenu : MonoBehaviour
 	
 	private void UpdateMenuFocus(bool _InputDown, bool _InputUp)
 	{
-		int buttonCount = m_MenuButtons.Length;
+		int activePanelCount = m_ActiveMenuPanels.Count;
+		System.Diagnostics.Debug.Assert(activePanelCount > 0);
+		MenuPanel mainPanel = m_ActiveMenuPanels[activePanelCount-1];
+		
+		MenuButton[] buttons = mainPanel.GetMenuButtons();
+		
+		int buttonCount = buttons.Length;
 		System.Diagnostics.Debug.Assert(buttonCount > 0);
 		
 		int focusButtonIndex = 0;
-		
-		bool validMenuFocus = IsMenuFocusValid();
+
+		bool validMenuFocus = IsMenuFocusValid(buttons);
 		if (validMenuFocus)
 		{
 			bool inputPrev = _InputUp;
@@ -380,7 +392,7 @@ public class MainMenu : MonoBehaviour
 		m_NextLevelIndex = _LevelIndex;
 	}
 	
-	private void PlayButtonPressed()
+	private void PlayLocalGameButtonPressed(MenuEvent _MenuEvent)
 	{
 		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
 		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
@@ -389,7 +401,8 @@ public class MainMenu : MonoBehaviour
 		if (validInputDevice && playerCount > 0)
 		{
 			//Play a local game
-			if (m_NetworkManager != null)
+			bool networkGameSupported = IsNetworkGameSupported();
+			if (networkGameSupported)
 			{
 				m_NetworkManager.SetNetworkMode(NetworkMode.E_NetworkNone);
 			}
@@ -410,7 +423,7 @@ public class MainMenu : MonoBehaviour
 		}
 	}
 	
-	private void AboutGameButtonPressed()
+	private void PlayIntroButtonPressed(MenuEvent _MenuEvent)
 	{
 		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
 		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
@@ -418,13 +431,13 @@ public class MainMenu : MonoBehaviour
 		{
 			SetLocalPlayerInputDevice(0, playerInputDevice);
 			
-			RequestLevelTransition(m_CreditSceneIndex);
+			RequestLevelTransition(m_IntroSceneIndex);
 			
 			DisableUI();
 		}
 	}
 	
-	private void QuitGameButtonPressed()
+	private void QuitGameButtonPressed(MenuEvent _MenuEvent)
 	{
 		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
 		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
@@ -453,81 +466,94 @@ public class MainMenu : MonoBehaviour
 		bool isUIEnable = IsUIEnable();
 		if (isUIEnable)
 		{
-			bool validMenuFocus = IsMenuFocusValid();
-			if (validMenuFocus)
+			int activePanelCount = m_ActiveMenuPanels.Count;
+			if (activePanelCount > 0)
 			{
-				string curFocusControlName = GUI.GetNameOfFocusedControl();
-				int curFocusButtonIndex = -1;
-				
-				int buttonCount = m_MenuButtons.Length;
-				for (int buttonIndex = 0; buttonIndex < buttonCount; ++buttonIndex)
+				int lastActivePanelIndex = activePanelCount-1;
+				//@NOTE: last active panel as the focus and only last panel button are active
+				MenuPanel topActivePanel = m_ActiveMenuPanels[lastActivePanelIndex];
+				MenuButton[] activeButtons = topActivePanel.GetMenuButtons();
+
+				bool validMenuFocus = IsMenuFocusValid(activeButtons);
+				if (validMenuFocus)
 				{
-					MenuButton button = m_MenuButtons[buttonIndex];
-					if (button.m_ControlName == curFocusControlName)
+					string curFocusControlName = GUI.GetNameOfFocusedControl();
+					int curFocusButtonIndex = -1;
+
+					int buttonCount = activeButtons.Length;
+					for (int buttonIndex = 0; buttonIndex < buttonCount; ++buttonIndex)
 					{
-						curFocusButtonIndex = buttonIndex;
-						break;
+						MenuButton button = activeButtons[buttonIndex];
+						if (button.GetControlName() == curFocusControlName)
+						{
+							curFocusButtonIndex = buttonIndex;
+							break;
+						}
+					}
+					if (curFocusButtonIndex != m_FocusOnButtonIndex)
+					{
+						//Debug.Log("OnGui: change focus from " + curFocusButtonIndex.ToString() + " to " + m_FocusOnButtonIndex.ToString());
+						
+						MenuButton focusButton = activeButtons[m_FocusOnButtonIndex];
+						string focusControlName = focusButton.GetControlName();
+						
+						GUI.FocusControl(focusControlName);
 					}
 				}
-				if (curFocusButtonIndex != m_FocusOnButtonIndex)
+				else
 				{
-					//Debug.Log("OnGui: change focus from " + curFocusButtonIndex.ToString() + " to " + m_FocusOnButtonIndex.ToString());
-					
-					MenuButton focusButton = m_MenuButtons[m_FocusOnButtonIndex];
-					string focusControlName = focusButton.m_ControlName;
-					
-					GUI.FocusControl(focusControlName);
+					GUI.FocusControl("");
 				}
-			}
-			else
-			{
-				GUI.FocusControl("");
-			}
-			
-			//@FIXME: make all panel code data driven / editable from editor
-			
-			int panelSlideOffsetX = -m_PanelWidth;
-			
-			int panelWidth = m_PanelWidth;
-			int panelHeight = m_PanelHeight;
-			
-			int centerPanelOffsetX = (m_CenterMenu)? Screen.width / 2 - panelWidth / 2 : m_CenterOffsetX;
-			int centerPanelOffsetY = (m_CenterMenu)? Screen.height / 2 - panelHeight / 2 : m_CenterOffsetY;
-			
-			int mainPanelIndex = 1;
-			if (m_CurrentPanelIndex >= mainPanelIndex)
-			{
-				int mainPanelSlideCount = m_CurrentPanelIndex - mainPanelIndex;
-				int mainPanelOffsetX = centerPanelOffsetX + mainPanelSlideCount * panelSlideOffsetX;
-				int mainPanelOffsetY = centerPanelOffsetY;
-				Rect mainPanel = new Rect( mainPanelOffsetX, mainPanelOffsetY, panelWidth, panelHeight);
 
-				string panelTitle = string.Format("\n<b>{0}</b>", m_PanelTitle);
-				GUI.Box(mainPanel, panelTitle);
-				int mainPanelTitleTextHeight = 80;
-				
-				int mainPanelButtonWidth = m_PanelButtonWidth;
-				int mainPanelButtonHeight = m_PanelButtonHeight;
-				int mainPanelButtonOffsetX = mainPanelOffsetX + (panelWidth - mainPanelButtonWidth) / 2;
-				int mainPanelButtonOffsetY = mainPanelOffsetY + mainPanelTitleTextHeight;
-				int mainPanelButtonInterspaceY = 60;
-				
-				int buttonCount = m_MenuButtons.Length;
-				for (int buttonIndex = 0; buttonIndex < buttonCount && isUIEnable; ++buttonIndex)
+				MenuPanel mainPanel = m_MenuPanels[m_MainPanelIndex];
+				int panelOffsetX = (m_CenterMenu)? Screen.width / 2 - mainPanel.m_PanelWidth / 2 + topActivePanel.m_PanelWidth : m_CenterOffsetX + topActivePanel.m_PanelWidth;
+				int panelOffsetY = (m_CenterMenu)? Screen.height / 2 - mainPanel.m_PanelHeight / 2 : m_CenterOffsetY;
+
+				for (int activePanelIndex = lastActivePanelIndex; activePanelIndex >= 0 ; --activePanelIndex)
 				{
-					MenuButton menuButton = m_MenuButtons[buttonIndex];
-					
-					GUI.SetNextControlName(menuButton.m_ControlName);
-					if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), menuButton.m_LabelName))
-					{
-						m_FocusOnButtonIndex = buttonIndex;
+					MenuPanel currentPanel = m_ActiveMenuPanels[activePanelIndex];
 
-						menuButton.m_TriggerDelegate();
-						//@NOTE: UI might have been disabled if button was pressed
-						isUIEnable = IsUIEnable();
-					}
+					int panelWidth = currentPanel.m_PanelWidth;
+					int panelHeight = currentPanel.m_PanelHeight;
+
+					panelOffsetX -= panelWidth;
+
+					Rect panelRect = new Rect( panelOffsetX, panelOffsetY, panelWidth, panelHeight);
 					
-					mainPanelButtonOffsetY += mainPanelButtonInterspaceY;
+					string title = string.Format("\n<b>{0}</b>", currentPanel.m_PanelTitle);
+					GUI.Box(panelRect, title);
+
+					int titleTextHeight = currentPanel.m_PanelTitleTextHeight;
+					
+					int buttonWidth = currentPanel.m_PanelButtonWidth;
+					int buttonHeight = currentPanel.m_PanelButtonHeight;
+					int buttonOffsetX = panelOffsetX + (panelWidth - buttonWidth) / 2;
+					int buttonOffsetY = panelOffsetY + titleTextHeight;
+
+					int buttonInterspaceY = currentPanel.m_PanelButtonInterspaceY;
+
+					MenuButton[] buttons = currentPanel.GetMenuButtons();
+					int buttonCount = buttons.Length;
+					for (int buttonIndex = 0; buttonIndex < buttonCount && isUIEnable; ++buttonIndex)
+					{
+						MenuButton button = buttons[buttonIndex];
+						
+						GUI.SetNextControlName(button.GetControlName());
+						if (GUI.Button(new Rect(buttonOffsetX, buttonOffsetY, buttonWidth, buttonHeight), button.GetLabelName()))
+						{
+							//@NOTE: last active panel as the focus and only last panel button are active
+							if (activePanelIndex == lastActivePanelIndex)
+							{
+								m_FocusOnButtonIndex = buttonIndex;
+								
+								button.TriggerDelegate();
+								//@NOTE: UI might have been disabled if button was pressed
+								isUIEnable = IsUIEnable();
+							}
+						}
+						
+						buttonOffsetY += buttonInterspaceY;
+					}
 				}
 			}
 		}

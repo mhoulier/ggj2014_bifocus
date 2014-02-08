@@ -293,8 +293,8 @@ public class SelectMenu : MonoBehaviour
 		int menuButtonCount = playerCount * playerSelectButtonCount + 2;
 		MenuButton[] menu = new MenuButton[menuButtonCount];
 
-		menu[menuButtonCount - 2] = new MenuButton("StartButton", "Start", StartButtonPressed);
-		menu[menuButtonCount - 1] = new MenuButton("BackButton", "Back", BackButtonPressed);
+		menu[menuButtonCount - 2] = new MenuButton("StartButton", "Start", MenuEvent.E_MenuStartPressed, StartButtonPressed);
+		menu[menuButtonCount - 1] = new MenuButton("BackButton", "Back", MenuEvent.E_MenuBackPressed, BackButtonPressed);
 		
 		m_MenuButtons = menu;
 
@@ -331,10 +331,10 @@ public class SelectMenu : MonoBehaviour
 			string playerSelectClassButton = GetPlayerClassButtonName(playerIndex);
 			
 			int selectInputButtonIndex = playerSelectButtonCount * playerIndex;
-			menu[selectInputButtonIndex] = new MenuButton(playerSelectInputButton, m_InputManager.GetInputDeviceName(playerInput), SelectInputPressed);
+			menu[selectInputButtonIndex] = new MenuButton(playerSelectInputButton, m_InputManager.GetInputDeviceName(playerInput), MenuEvent.E_MenuSelectInputPressed, SelectInputPressed);
 			
 			int selectClassButtonIndex = selectInputButtonIndex + 1;
-			menu[selectClassButtonIndex] = new MenuButton(playerSelectClassButton, GameHunt.GetPlayerClassName(playerClass), SelectClassPressed);
+			menu[selectClassButtonIndex] = new MenuButton(playerSelectClassButton, GameHunt.GetPlayerClassName(playerClass), MenuEvent.E_MenuSelectClassPressed, SelectClassPressed);
 		}
 		
 		m_MenuButtons = menu;
@@ -416,7 +416,7 @@ public class SelectMenu : MonoBehaviour
 		else if (pressFocusButton)
 		{
 			MenuButton focusButton = m_MenuButtons[m_FocusOnButtonIndex];
-			focusButton.m_TriggerDelegate();
+			focusButton.TriggerDelegate();
 		}
 	}
 	
@@ -491,10 +491,10 @@ public class SelectMenu : MonoBehaviour
 		m_NextLevelIndex = _LevelIndex;
 	}
 
-	private void SelectInputPressed()
+	private void SelectInputPressed(MenuEvent _MenuEvent)
 	{
 		MenuButton focusedButton = m_MenuButtons[m_FocusOnButtonIndex];
-		string curFocusControlName = focusedButton.m_ControlName;
+		string curFocusControlName = focusedButton.GetControlName();
 
 		int playerCount = GetLocalPlayerCount();
 		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
@@ -512,10 +512,10 @@ public class SelectMenu : MonoBehaviour
 			}
 		}
 	}		
-	private void SelectClassPressed()
+	private void SelectClassPressed(MenuEvent _MenuEvent)
 	{
 		MenuButton focusedButton = m_MenuButtons[m_FocusOnButtonIndex];
-		string curFocusControlName = focusedButton.m_ControlName;
+		string curFocusControlName = focusedButton.GetControlName();
 		
 		int playerCount = GetLocalPlayerCount();
 		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
@@ -537,7 +537,7 @@ public class SelectMenu : MonoBehaviour
 		}
 	}
 	
-	private void StartButtonPressed()
+	private void StartButtonPressed(MenuEvent _MenuEvent)
 	{
 		List<Player> players = m_PlayerManager.GetPlayers();
 		int playerCount = players.Count;
@@ -557,7 +557,7 @@ public class SelectMenu : MonoBehaviour
 		DisableUI();
 	}
 	
-	private void BackButtonPressed()
+	private void BackButtonPressed(MenuEvent _MenuEvent)
 	{
 		BackToMainMenu();
 
@@ -591,7 +591,7 @@ public class SelectMenu : MonoBehaviour
 				for (int buttonIndex = 0; buttonIndex < buttonCount; ++buttonIndex)
 				{
 					MenuButton button = m_MenuButtons[buttonIndex];
-					if (button.m_ControlName == curFocusControlName)
+					if (button.GetControlName() == curFocusControlName)
 					{
 						curFocusButtonIndex = buttonIndex;
 						break;
@@ -602,7 +602,7 @@ public class SelectMenu : MonoBehaviour
 					Debug.Log("OnGui: change focus from " + curFocusButtonIndex.ToString() + " to " + m_FocusOnButtonIndex.ToString());
 					
 					MenuButton focusButton = m_MenuButtons[m_FocusOnButtonIndex];
-					string focusControlName = focusButton.m_ControlName;
+					string focusControlName = focusButton.GetControlName();
 					
 					GUI.FocusControl(focusControlName);
 				}
@@ -645,12 +645,12 @@ public class SelectMenu : MonoBehaviour
 				{
 					MenuButton menuButton = m_MenuButtons[buttonIndex];
 					
-					GUI.SetNextControlName(menuButton.m_ControlName);
-					if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), menuButton.m_LabelName))
+					GUI.SetNextControlName(menuButton.GetControlName());
+					if (GUI.Button(new Rect(mainPanelButtonOffsetX, mainPanelButtonOffsetY, mainPanelButtonWidth, mainPanelButtonHeight), menuButton.GetLabelName()))
 					{
 						m_FocusOnButtonIndex = buttonIndex;
 
-						menuButton.m_TriggerDelegate();
+						menuButton.TriggerDelegate();
 						//@NOTE: UI might have been disabled if button was pressed
 						isUIEnable = IsUIEnable();
 					}
