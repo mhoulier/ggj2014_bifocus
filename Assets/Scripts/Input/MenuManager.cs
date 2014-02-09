@@ -666,7 +666,15 @@ public class MenuButton
 	private MenuEvent m_MenuEventToTrigger = MenuEvent.E_MenuEventNone;
 	
 	private MenuEventDelegate m_TriggerDelegate = null;
-	
+
+	public MenuButton(string _ControlName, string _LabelName, MenuEvent _MenuEventToTrigger)
+	{
+		m_ControlName = _ControlName;
+		m_LabelName = _LabelName;
+		m_MenuEventToTrigger = _MenuEventToTrigger;
+		m_TriggerDelegate = null;
+	}
+
 	public MenuButton(string _ControlName, string _LabelName, MenuEvent _MenuEventToTrigger, MenuEventDelegate _TriggerDelegate)
 	{
 		m_ControlName = _ControlName;
@@ -678,6 +686,8 @@ public class MenuButton
 	public string GetControlName() { return m_ControlName; }
 	public string GetLabelName() { return m_LabelName; }
 	public MenuEvent GetMenuEventToTrigger() { return m_MenuEventToTrigger; }
+
+	public void UpdateLabelName(string _LabelName) { m_LabelName = _LabelName; }
 	
 	public void InitTriggerDelegate(MenuEventDelegate _TriggerDelegate) { m_TriggerDelegate = _TriggerDelegate; }
 	public void TriggerDelegate() { m_TriggerDelegate(m_MenuEventToTrigger); }
@@ -703,6 +713,18 @@ public class MenuPanel
 	
 	[SerializeField]
 	private MenuButton[] m_MenuButtons = null;
-	
-	public MenuButton[] GetMenuButtons() { return m_MenuButtons; }
+
+	private MenuButton[] m_InstanceMenuButtons = null;
+
+	public void InitMenuButtons()
+	{
+		ResetMenuButtons(m_MenuButtons);
+	}
+
+	public void ResetMenuButtons(MenuButton[] _MenuButtons)
+	{
+		m_InstanceMenuButtons = _MenuButtons;
+	}
+
+	public MenuButton[] GetMenuButtons() { return m_InstanceMenuButtons; }
 }

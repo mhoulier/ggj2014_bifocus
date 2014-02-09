@@ -20,11 +20,16 @@ public class MainMenu : MonoBehaviour
 	private bool IsSequenceActive() { return m_IsActiveSequence; }
 	
 	private int m_NextLevelIndex = -1;
+	private bool m_WaitForLocalPlayers = false;
 
 	[SerializeField]
-	private int m_SelectSceneIndex = 0;
+	private int m_GameSceneIndex = 0;
 	[SerializeField]
 	private int m_IntroSceneIndex = 0;
+
+	[SerializeField]
+	private int m_LocalPlayerCount = 2;
+	private int GetLocalPlayerCount(){ return m_LocalPlayerCount; }
 
 	[SerializeField]
 	private Texture2D m_BackgroundImage = null;
@@ -40,6 +45,10 @@ public class MainMenu : MonoBehaviour
 
 	[SerializeField]
 	private int m_MainPanelIndex = 0;
+	[SerializeField]
+	private int m_SelectPanelIndex = 1;
+
+	private bool m_RequestSelectPanelUpdate = false;
 
 	private List<MenuPanel> m_ActiveMenuPanels = null;
 	
@@ -54,11 +63,8 @@ public class MainMenu : MonoBehaviour
 	//private bool m_InputVerticalDown = false;
 	//private bool m_InputVerticalUp = false;
 
-	[SerializeField]
-	private int m_LocalPlayerCount = 2;
-	private int GetLocalPlayerCount(){ return m_LocalPlayerCount; }
-
 	private InputDevice[] m_PlayersInputDevice = null;
+	private PlayerClass[] m_PlayersClass = null;
 
 	private InputDevice GetLocalPlayerInputDevice(int _PlayerIndex)
 	{
@@ -75,6 +81,41 @@ public class MainMenu : MonoBehaviour
 			m_PlayersInputDevice[_PlayerIndex] = _InputDevice;
 		}
 
+		return validPlayerIndex;
+	}
+	private int FindLocalPlayerIndex(InputDevice _PlayerDevice)
+	{
+		int foundIndex = -1;
+
+		int playerCount = GetLocalPlayerCount();
+		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
+		{
+			InputDevice playerDevice = GetLocalPlayerInputDevice(playerIndex);
+			if (playerDevice == _PlayerDevice)
+			{
+				foundIndex = playerIndex;
+				break;
+			}
+		}
+
+		return foundIndex;
+	}
+
+	private PlayerClass GetLocalPlayerClass(int _PlayerIndex)
+	{
+		bool validPlayerIndex = (0 <= _PlayerIndex && _PlayerIndex < GetLocalPlayerCount());
+		PlayerClass playerClass = validPlayerIndex? m_PlayersClass[_PlayerIndex] : PlayerClass.E_ClassNone;
+		
+		return playerClass;
+	}
+	private bool SetLocalPlayerClass(int _PlayerIndex, PlayerClass _PlayerClass)
+	{
+		bool validPlayerIndex = (0 <= _PlayerIndex && _PlayerIndex < GetLocalPlayerCount());
+		if (validPlayerIndex)
+		{
+			m_PlayersClass[_PlayerIndex] = _PlayerClass;
+		}
+		
 		return validPlayerIndex;
 	}
 
@@ -98,6 +139,73 @@ public class MainMenu : MonoBehaviour
 			{
 				availableInput = supportedInput;
 				break;
+			}
+		}
+		
+		return availableInput;
+	}
+
+	private InputDevice GetNextAvailableInputDevice(InputDevice[] _SupportedInputDevices, InputDevice _CurrentInput)
+	{
+		InputDevice availableInput = InputDevice.E_InputDeviceNone;
+		int inputCount = _SupportedInputDevices.Length;
+		
+		int currentInputIndex = -1;
+		for (int inputIndex = 0; inputIndex < inputCount; ++inputIndex)
+		{
+			InputDevice supportedInput = _SupportedInputDevices [inputIndex];
+			bool isCurrentInput = (supportedInput == _CurrentInput);
+			if (isCurrentInput)
+			{
+				currentInputIndex = inputIndex;
+				break;
+			}
+		}
+		
+		for (int inputIndex = currentInputIndex+1; inputIndex < inputCount; ++inputIndex)
+		{
+			InputDevice supportedInput = _SupportedInputDevices [inputIndex];
+			
+			bool isAvailable = true;
+			foreach (InputDevice playerInput in m_PlayersInputDevice)
+			{
+				bool areInputConflicting = m_InputManager.AreInputConflicting(supportedInput, playerInput);
+				if (areInputConflicting)
+				{
+					isAvailable = false;
+					break;
+				}
+			}
+			
+			if (isAvailable)
+			{
+				availableInput = supportedInput;
+				break;
+			}
+		}
+		
+		bool foundValidInput = m_InputManager.IsInputDeviceValid (availableInput);
+		if (foundValidInput == false)
+		{
+			for (int inputIndex = 0; inputIndex < currentInputIndex; ++inputIndex)
+			{
+				InputDevice supportedInput = _SupportedInputDevices [inputIndex];
+				bool isAvailable = true;
+				foreach (InputDevice playerInput in m_PlayersInputDevice)
+				{
+					bool areInputConflicting = m_InputManager.AreInputConflicting(supportedInput, playerInput);
+					if (areInputConflicting)
+					{
+						isAvailable = false;
+						break;
+					}
+				}
+				
+				if (isAvailable)
+				{
+					availableInput = supportedInput;
+					break;
+				}
 			}
 		}
 		
@@ -180,6 +288,18 @@ public class MainMenu : MonoBehaviour
 	private void InitPlayers()
 	{
 		m_PlayerManager.RequestRemoveAllPlayers();
+
+		int playerCount = GetLocalPlayerCount ();
+		m_PlayersInputDevice = new InputDevice[playerCount];
+		m_PlayersClass = new PlayerClass[playerCount];
+
+		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
+		{	
+			SetLocalPlayerInputDevice(playerIndex, InputDevice.E_InputDeviceNone);
+
+			PlayerClass playerClass = (playerIndex%2 == 0)? PlayerClass.E_ClassOnGround : PlayerClass.E_ClassHighUp;
+			SetLocalPlayerClass(playerIndex, playerClass);
+		}
 	}
 
 	private MenuEventDelegate ResolveMenuEventDelegate(MenuEvent _MenuEvent)
@@ -189,6 +309,18 @@ public class MainMenu : MonoBehaviour
 		{
 		case MenuEvent.E_MenuPlayLocalPressed:
 			menuEventDelegate = PlayLocalGameButtonPressed;
+			break;
+		case MenuEvent.E_MenuSelectInputPressed:
+			menuEventDelegate = SelectInputPressed;
+			break;
+		case MenuEvent.E_MenuSelectClassPressed:
+			menuEventDelegate = SelectClassPressed;
+			break;
+		case MenuEvent.E_MenuStartPressed:
+			menuEventDelegate = StartButtonPressed;
+			break;
+		case MenuEvent.E_MenuBackPressed:
+			menuEventDelegate = BackButtonPressed;
 			break;
 		case MenuEvent.E_MenuIntroPressed:
 			menuEventDelegate = PlayIntroButtonPressed;
@@ -206,31 +338,113 @@ public class MainMenu : MonoBehaviour
 
 	private void InitMenu()
 	{
+		InitPanels(m_MenuPanels);
+
 		int menuPanelCount = m_MenuPanels.Length;
+
+		if (menuPanelCount > m_SelectPanelIndex)
+		{
+			MenuPanel selectPanel = m_MenuPanels[m_SelectPanelIndex];
+			InitSelectPanel(selectPanel);
+		}
+
 		if (menuPanelCount > m_MainPanelIndex)
 		{
 			MenuPanel mainPanel = m_MenuPanels[m_MainPanelIndex];
-
-			foreach (MenuPanel panel in m_MenuPanels)
-			{
-				MenuButton[] buttons = panel.GetMenuButtons();
-				foreach (MenuButton button in buttons)
-				{
-					MenuEventDelegate buttonDelegate = ResolveMenuEventDelegate(button.GetMenuEventToTrigger());
-					button.InitTriggerDelegate(buttonDelegate);
-				}
-			}
-
 			m_ActiveMenuPanels = new List<MenuPanel>(menuPanelCount);
 			m_ActiveMenuPanels.Add(mainPanel);
 		}
+	}
+
+	private void InitPanels(MenuPanel[] _Panels)
+	{
+		foreach (MenuPanel panel in _Panels)
+		{
+			panel.InitMenuButtons();
+
+			MenuButton[] buttons = panel.GetMenuButtons();
+			foreach (MenuButton button in buttons)
+			{
+				MenuEventDelegate buttonDelegate = ResolveMenuEventDelegate(button.GetMenuEventToTrigger());
+				button.InitTriggerDelegate(buttonDelegate);
+			}
+		}
+	}
+
+	private string GetPlayerSelectInputButtonName(int _PlayerIndex)
+	{
+		string buttonName = string.Format("Player {0} Select Input Button", _PlayerIndex + 1);
+		return buttonName;
+	}
+	
+	private string GetPlayerClassButtonName(int _PlayerIndex)
+	{
+		string buttonName = string.Format("Player {0} Select Class Button", _PlayerIndex + 1);
+		return buttonName;
+	}
+
+	private void InitSelectPanel(MenuPanel _SelectPanel)
+	{
+		MenuButton[] oldButtons = _SelectPanel.GetMenuButtons();
+		int oldButtonCount = oldButtons.Length;
 
 		int playerCount = GetLocalPlayerCount();
-		m_PlayersInputDevice = new InputDevice[playerCount];
+
+		//@HACK: this should be data driven, specified from Unity editor
+		int playerSelectButtonCount = 2;
+		int newButtonCount = playerCount * playerSelectButtonCount;
+
+		MenuButton[] buttons = new MenuButton[newButtonCount + oldButtonCount];
 
 		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
 		{
-			SetLocalPlayerInputDevice(playerIndex, InputDevice.E_InputDeviceNone);
+			InputDevice playerInput = GetLocalPlayerInputDevice(playerIndex);
+			PlayerClass playerClass = GetLocalPlayerClass(playerIndex);
+			
+			string playerSelectInputButton = GetPlayerSelectInputButtonName(playerIndex);
+			string playerSelectClassButton = GetPlayerClassButtonName(playerIndex);
+			
+			int selectInputButtonIndex = playerSelectButtonCount * playerIndex;
+			MenuButton selectInputButton = new MenuButton(playerSelectInputButton, m_InputManager.GetInputDeviceName(playerInput), MenuEvent.E_MenuSelectInputPressed);
+			MenuEventDelegate selectInputButtonDelegate = ResolveMenuEventDelegate(MenuEvent.E_MenuSelectInputPressed);
+			selectInputButton.InitTriggerDelegate(selectInputButtonDelegate);
+
+			int selectClassButtonIndex = selectInputButtonIndex + 1;
+			MenuButton selectClassButton = new MenuButton(playerSelectClassButton, GameHunt.GetPlayerClassName(playerClass), MenuEvent.E_MenuSelectClassPressed);
+			MenuEventDelegate selectClassButtonDelegate = ResolveMenuEventDelegate(MenuEvent.E_MenuSelectClassPressed);
+			selectClassButton.InitTriggerDelegate(selectClassButtonDelegate);
+
+			buttons[selectInputButtonIndex] = selectInputButton;
+			buttons[selectClassButtonIndex] = selectClassButton;
+		}
+
+		for (int oldButtonIndex = 0; oldButtonIndex < oldButtonCount; ++oldButtonIndex)
+		{
+			buttons[newButtonCount + oldButtonIndex] = oldButtons[oldButtonIndex];
+		}
+
+		_SelectPanel.ResetMenuButtons(buttons);
+	}
+
+	private void UpdateSelectPanel(MenuPanel _SelectPanel)
+	{
+		MenuButton[] buttons = _SelectPanel.GetMenuButtons();
+		
+		int playerCount = GetLocalPlayerCount();
+		
+		//@HACK: this should be data driven, specified from Unity editor
+		int playerSelectButtonCount = 2;
+		
+		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
+		{
+			InputDevice playerInput = GetLocalPlayerInputDevice(playerIndex);
+			PlayerClass playerClass = GetLocalPlayerClass(playerIndex);
+			
+			int selectInputButtonIndex = playerSelectButtonCount * playerIndex;
+			buttons[selectInputButtonIndex].UpdateLabelName(m_InputManager.GetInputDeviceName(playerInput));
+			
+			int selectClassButtonIndex = selectInputButtonIndex + 1;
+			buttons[selectClassButtonIndex].UpdateLabelName(GameHunt.GetPlayerClassName(playerClass));
 		}
 	}
 	
@@ -319,6 +533,14 @@ public class MainMenu : MonoBehaviour
 	{
 		if (IsUIEnable())
 		{
+			if (m_RequestSelectPanelUpdate)
+			{
+				//@FIXME only update select panel when needed
+				MenuPanel selectPanel = m_MenuPanels[m_SelectPanelIndex];
+				UpdateSelectPanel(selectPanel);
+
+				m_RequestSelectPanelUpdate = false;
+			}
 		}
 	}
 
@@ -327,9 +549,39 @@ public class MainMenu : MonoBehaviour
 		bool nextLevelIsValid = m_LevelManager.IsValidLevelIndex(m_NextLevelIndex);
 		if ( nextLevelIsValid )
 		{
-			//@TODO: Wait for pending local players
+			bool playersReady = true;
+			if (m_WaitForLocalPlayers)
+			{
+				int localPlayerCount = GetLocalPlayerCount();
+				int localPlayerReadyCount = 0;
 
-			EndSequence();
+				List<Player> players = m_PlayerManager.GetPlayers();
+				int playerCount = players.Count;
+				for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
+				{
+					Player player = players[playerIndex];
+					InputDevice playerDevice = player.GetPlayerInput();
+
+					//@NOTE remote players input device should be None
+					if (playerDevice != InputDevice.E_InputDeviceNone)
+					{
+						int localPlayerIndex = FindLocalPlayerIndex(playerDevice);
+						System.Diagnostics.Debug.Assert(localPlayerIndex >= 0);
+
+						PlayerClass playerClass = GetLocalPlayerClass(localPlayerIndex);
+						player.SetPlayerClass(playerClass);
+
+						++localPlayerReadyCount;
+					}
+				}
+
+				playersReady = (localPlayerReadyCount == localPlayerCount);
+			}
+
+			if (playersReady)
+			{
+				EndSequence();
+			}
 		}
 	}
 	
@@ -385,11 +637,12 @@ public class MainMenu : MonoBehaviour
 		m_LevelManager.QuitGame();
 	}
 	
-	private void RequestLevelTransition(int _LevelIndex)
+	private void RequestLevelTransition(int _LevelIndex, bool _WaitForLocalPlayers)
 	{
 		//Debug.Log("Request Level Transition to " + _LevelIndex.ToString());
 		
 		m_NextLevelIndex = _LevelIndex;
+		m_WaitForLocalPlayers = _WaitForLocalPlayers;
 	}
 	
 	private void PlayLocalGameButtonPressed(MenuEvent _MenuEvent)
@@ -408,18 +661,115 @@ public class MainMenu : MonoBehaviour
 			}
 
 			SetLocalPlayerInputDevice(0, playerInputDevice);
-			m_PlayerManager.RequestLocalPlayerJoin(playerInputDevice);
 			
 			InputDevice[] validDevices = m_InputManager.GetValidInputDevices();
 			for (int playerIndex = 1; playerIndex < playerCount; ++playerIndex)
 			{
 				InputDevice availableDevice = GetAvailableInputDevice(validDevices);
-				m_PlayerManager.RequestLocalPlayerJoin(availableDevice);
+				SetLocalPlayerInputDevice(playerIndex, availableDevice);
 			}
-			
-			RequestLevelTransition(m_SelectSceneIndex);
+
+			//@FIXME should probably make changes to active panel list later on (next Update())
+			int menuPanelCount = m_MenuPanels.Length;
+			if (menuPanelCount > m_SelectPanelIndex)
+			{
+				MenuPanel selectPanel = m_MenuPanels[m_SelectPanelIndex];
+				m_ActiveMenuPanels.Add(selectPanel);
+
+				m_RequestSelectPanelUpdate = true;
+			}
+		}
+	}
+
+	private void SelectInputPressed(MenuEvent _MenuEvent)
+	{
+		int activePanelCount = m_ActiveMenuPanels.Count;
+		System.Diagnostics.Debug.Assert(activePanelCount > 0);
+		MenuPanel mainPanel = m_ActiveMenuPanels[activePanelCount-1];
+		MenuButton[] buttons = mainPanel.GetMenuButtons();
+
+		MenuButton focusedButton = buttons[m_FocusOnButtonIndex];
+		string curFocusControlName = focusedButton.GetControlName();
+		
+		int playerCount = GetLocalPlayerCount();
+		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
+		{
+			string playerSelectInputButton = GetPlayerSelectInputButtonName(playerIndex);
+			if (curFocusControlName.Equals(playerSelectInputButton))
+			{
+				InputDevice[] validDevices = m_InputManager.GetValidInputDevices();
+				InputDevice oldPlayerDevice = GetLocalPlayerInputDevice(playerIndex);
+				SetLocalPlayerInputDevice(playerIndex, InputDevice.E_InputDeviceNone);
+				
+				InputDevice availableDevice = GetNextAvailableInputDevice(validDevices, oldPlayerDevice);
+				InputDevice newPlayerDevice = (availableDevice != InputDevice.E_InputDeviceNone)? availableDevice : oldPlayerDevice;
+				SetLocalPlayerInputDevice(playerIndex, newPlayerDevice);
+			}
+		}
+
+		m_RequestSelectPanelUpdate = true;
+	}		
+	private void SelectClassPressed(MenuEvent _MenuEvent)
+	{
+		int activePanelCount = m_ActiveMenuPanels.Count;
+		System.Diagnostics.Debug.Assert(activePanelCount > 0);
+		MenuPanel mainPanel = m_ActiveMenuPanels[activePanelCount-1];
+		MenuButton[] buttons = mainPanel.GetMenuButtons();
+
+		MenuButton focusedButton = buttons[m_FocusOnButtonIndex];
+		string curFocusControlName = focusedButton.GetControlName();
+		
+		int playerCount = GetLocalPlayerCount();
+		for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
+		{
+			string playerSelectClassButton = GetPlayerClassButtonName(playerIndex);
+			if (curFocusControlName.Equals(playerSelectClassButton))
+			{
+				PlayerClass curPlayerClass = GetLocalPlayerClass(playerIndex);
+				PlayerClass newPlayerClass = GameHunt.GetNextPlayerClass(curPlayerClass);
+				SetLocalPlayerClass(playerIndex, newPlayerClass);
+			}
+			else
+			{
+				//@HACK Forcing other player to switch class TOO
+				PlayerClass curPlayerClass = GetLocalPlayerClass(playerIndex);
+				PlayerClass newPlayerClass = GameHunt.GetNextPlayerClass(curPlayerClass);
+				SetLocalPlayerClass(playerIndex, newPlayerClass);
+			}
+		}
+
+		m_RequestSelectPanelUpdate = true;
+	}
+
+	private void StartButtonPressed(MenuEvent _MenuEvent)
+	{
+		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
+		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
+		if (validInputDevice)
+		{
+			int playerCount = GetLocalPlayerCount();
+			for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex)
+			{
+				InputDevice playerDevice = GetLocalPlayerInputDevice(playerIndex);
+				m_PlayerManager.RequestLocalPlayerJoin(playerDevice);
+			}
+
+			bool waitForLocalPlayers = true;
+			RequestLevelTransition(m_GameSceneIndex, waitForLocalPlayers);
 			
 			DisableUI();
+		}
+	}
+
+	private void BackButtonPressed(MenuEvent _MenuEvent)
+	{
+		InputDevice playerInputDevice = m_MenuManager.GetPlayerInputDeviceFromValidateMenuInput();
+		bool validInputDevice = m_InputManager.IsInputDeviceValid(playerInputDevice);
+		if (validInputDevice)
+		{
+			//@FIXME should probably make changes to active panel list later on (next Update())
+			int mainPanelIndex = m_ActiveMenuPanels.Count - 1;
+			m_ActiveMenuPanels.RemoveAt(mainPanelIndex);
 		}
 	}
 	
@@ -430,8 +780,9 @@ public class MainMenu : MonoBehaviour
 		if (validInputDevice)
 		{
 			SetLocalPlayerInputDevice(0, playerInputDevice);
-			
-			RequestLevelTransition(m_IntroSceneIndex);
+
+			bool waitForLocalPlayers = false;
+			RequestLevelTransition(m_IntroSceneIndex, waitForLocalPlayers);
 			
 			DisableUI();
 		}

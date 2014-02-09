@@ -106,15 +106,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_GameManagerPrefab: {fileID: 100000, guid: 7d441f4aea6f0c24d8056aca54aa8321, type: 2}
-  m_SelectSceneIndex: 2
+  m_GameSceneIndex: 2
   m_IntroSceneIndex: 0
+  m_LocalPlayerCount: 2
   m_BackgroundImage: {fileID: 2800000, guid: 9093c8fddc1cf0c4a95a31177b25bc17, type: 3}
   m_CenterMenu: 1
   m_CenterOffsetX: 700
   m_CenterOffsetY: 150
   m_MenuPanels:
   - m_PanelWidth: 200
-    m_PanelHeight: 260
+    m_PanelHeight: 200
     m_PanelButtonWidth: 140
     m_PanelButtonHeight: 40
     m_PanelButtonInterspaceY: 60
@@ -130,8 +131,22 @@ MonoBehaviour:
     - m_ControlName: QuitButton
       m_LabelName: Exit
       m_MenuEventToTrigger: 5
+  - m_PanelWidth: 200
+    m_PanelHeight: 380
+    m_PanelButtonWidth: 140
+    m_PanelButtonHeight: 40
+    m_PanelButtonInterspaceY: 60
+    m_PanelTitle: 
+    m_PanelTitleTextHeight: 20
+    m_MenuButtons:
+    - m_ControlName: StartButton
+      m_LabelName: Start Game
+      m_MenuEventToTrigger: 6
+    - m_ControlName: BackButton
+      m_LabelName: Back
+      m_MenuEventToTrigger: 7
   m_MainPanelIndex: 0
-  m_LocalPlayerCount: 2
+  m_SelectPanelIndex: 1
 --- !u!81 &2035565700
 AudioListener:
   m_ObjectHideFlags: 0
